@@ -1,0 +1,12 @@
+{
+  "types": [
+    {"type":"generic","section":"Generic"},
+    {"type":"image","section":"Image"},
+    {"type":"build","section":"Build System"},
+    {"type":"ci","section":"Build System"},
+    {"type":"docs","section":"Documentation"},
+    {"type":"feat","section":"Features"},
+    {"type":"fix","section":"Bug Fixes"},
+    {"type":"test","section":"Tests"}
+  ]
+}
