@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.4.0](https://github.com/mushoffa/gorengan/compare/v0.3.1...v0.4.0) (2024-07-13)
+
+
+### Image
+
+* **monochrome:** Add function to convert to monochrome image ([e355179](https://github.com/mushoffa/gorengan/commit/e3551796b98ceed3edf0daf365c58eb1769f84e0))
+
 ### [0.3.1](https://github.com/mushoffa/gorengan/compare/v0.3.0...v0.3.1) (2024-07-13)
 
 
