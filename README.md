@@ -1,4 +1,7 @@
 # Gorengan
+
+[![Go Reference](https://pkg.go.dev/badge/github.com/mushoffa/gorengan.svg)](https://pkg.go.dev/github.com/mushoffa/gorengan)
+
 Gorengan is a simple Go wraper or extension library for common use-case which intended to simplify your development process. The listed library is solely based on author past project(s) or current use-case. Thus, you may find some what you're looking for, or you may not find at all. It's simple just like gorengan, no fancy things innit. Thank you.
 
 ## Getting Started
