@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.3.0](https://github.com/mushoffa/gorengan/compare/v0.2.0...v0.3.0) (2024-07-13)
+
+
+### Image
+
+* **histogram:** New function to generate histogram of monochrome image ([1d54a64](https://github.com/mushoffa/gorengan/commit/1d54a64b88f5e85e8db79414942cf45462bf3834))
+
 ## [0.2.0](https://github.com/mushoffa/gorengan/compare/v0.1.0...v0.2.0) (2024-07-13)
 
 
