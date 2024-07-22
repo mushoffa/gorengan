@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.5.0](https://github.com/mushoffa/gorengan/compare/v0.4.0...v0.5.0) (2024-07-22)
+
+
+### Image
+
+* **monochrome:** Enhance monochrome process with concurrent process ([afe8b1e](https://github.com/mushoffa/gorengan/commit/afe8b1e094765b500e80c561c700bb9b0ff78223))
+
+
+### Build System
+
+* Add minio on standard version section ([e8fd44a](https://github.com/mushoffa/gorengan/commit/e8fd44a26eb3934f9f1a37dcdd387e3b4e81c9ce))
+* Bump dependency ([b025a5c](https://github.com/mushoffa/gorengan/commit/b025a5c26f210d349855f21b74743ab6a0d8e154))
+
+
+### Minio
+
+* New library ([e2fbbaa](https://github.com/mushoffa/gorengan/commit/e2fbbaae962294315a3646989a0228e23b4c50f0))
+
+
+### Tests
+
+* **image:** Add unit test, benchmark, and input test image ([d227efe](https://github.com/mushoffa/gorengan/commit/d227efeb3e38b1dfd671cc96a2344fd62a980b0f))
+* **minio:** Add makefile to run unit tests ([616952f](https://github.com/mushoffa/gorengan/commit/616952f33355293cd14b4bb4097e54eba96d58a9))
+* **minio:** Add unit tests and sample input files ([bd4d34d](https://github.com/mushoffa/gorengan/commit/bd4d34d63663a576a319ae50fac020ca3e52e0c5))
+
+
+### Documentation
+
+* **minio:** Add readme ([225fce6](https://github.com/mushoffa/gorengan/commit/225fce64f9cb90f0a3ec0687f48e91332db1fc3b))
+
 ## [0.4.0](https://github.com/mushoffa/gorengan/compare/v0.3.1...v0.4.0) (2024-07-13)
 
 
