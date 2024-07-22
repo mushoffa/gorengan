@@ -2,30 +2,33 @@ package image
 
 import (
 	"testing"
-
-	"github.com/mushoffa/gorengan/image"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMonochrome1_Success(t *testing.T) {
-	img, err := image.ReadFile("./test/input_monochrome.png")
+func TestMonochrome_Success(t *testing.T) {
+	img, err := ReadFile("./test/input_color_1.png")
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	start := time.Now()
 	bounds := img.Bounds()
-	monochrome := image.NewMonochrome(bounds, 160)	
+	monochrome := NewMonochrome(bounds, 200)	
 
 	for x := bounds.Min.X; x < bounds.Max.X; x++ {
 		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 			pixel := img.At(x,y)
-			monochromeColor := image.MonochromeModel.Convert(pixel)
+			monochromeColor := MonochromeModel.Convert(pixel)
 			monochrome.Set(x, y, monochromeColor)
 		}
 	}
 
-	err = image.WriteFile(monochrome, "./test", "output_monochrome")
+	elapsed := time.Since(start)
+	t.Log("Monochrome took: ", elapsed)
+
+	err = WriteFile(monochrome, "./test", "output_monochrome_1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,27 +36,50 @@ func TestMonochrome1_Success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestMonochrome2_Success(t *testing.T) {
-	img, err := image.ReadFile("./test/input_monochrome_2.png")
+func TestMonochromeLazyConcurrent_Success(t *testing.T) {
+	img, err := ReadFile("./test/input_color_1.png")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	bounds := img.Bounds()
-	monochrome := image.NewMonochrome(bounds, 160)	
+	start := time.Now()
+	monochrome := New(img).Monochrome(200)
+	elapsed := time.Since(start)
+	t.Log("MonochromeConcurrent: ", elapsed)
 
-	for x := bounds.Min.X; x < bounds.Max.X; x++ {
-		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-			pixel := img.At(x,y)
-			monochromeColor := image.MonochromeModel.Convert(pixel)
-			monochrome.Set(x, y, monochromeColor)
-		}
-	}
-
-	err = image.WriteFile(monochrome, "./test", "output_monochrome_2")
+	err = WriteFile(monochrome, "./test", "output_monochrome_1")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	assert.Nil(t, err)
+}
+
+func BenchmarkMonochrome(b *testing.B) {
+	img, err := ReadFile("./test/input_color_1.png")
+	if err != nil {
+		b.Fatal(err)
+	}
+	for n := 0; n < b.N; n++ {
+		bounds := img.Bounds()
+		monochrome := NewMonochrome(bounds, 200)	
+
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+				pixel := img.At(x,y)
+				monochromeColor := MonochromeModel.Convert(pixel)
+				monochrome.Set(x, y, monochromeColor)
+			}
+		}
+	}
+}
+
+func BenchmarkMonochromeConcurrent(b *testing.B) {
+	img, err := ReadFile("./test/input_color_1.png")
+	if err != nil {
+		b.Fatal(err)
+	}
+	for n := 0; n < b.N; n++ {
+		New(img).Monochrome(200)
+	}
 }
