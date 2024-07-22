@@ -2,6 +2,7 @@
   "types": [
     {"type":"generic","section":"Generic"},
     {"type":"image","section":"Image"},
+    {"type":"minio","section":"Minio"},
     {"type":"build","section":"Build System"},
     {"type":"ci","section":"Build System"},
     {"type":"docs","section":"Documentation"},
