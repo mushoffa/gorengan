@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/base64"
 	img "image"
+	"image/color"
 	"image/png"
+	"sync"
 )
 
 // Image is a data struct which embeds Go standard image library.
@@ -35,19 +37,32 @@ func (p *Image) Bytes() ([]byte, error) {
 	return encode(p)
 }
 
+type pixels struct {
+	x,y int
+	color color.Color
+}
+
 // Monochrome converts registered image from [New] function and returns [Monochrome] type image.
 func (p *Image) Monochrome(threshold uint8) (*Monochrome) {
 	bounds := p.Bounds()
 
 	monochrome := NewMonochrome(bounds, threshold)
+	var wg sync.WaitGroup
 
 	for x := bounds.Min.X; x < bounds.Max.X; x++ {
-		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-			pixel := p.At(x,y)
-			color := MonochromeModel.Convert(pixel)
-			monochrome.Set(x, y, color)
-		}
+		wg.Add(1)
+		go func(x int, wg *sync.WaitGroup, m *Monochrome) {
+			defer wg.Done()
+
+			for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+				pixel := p.At(x,y)
+				c := MonochromeModel.Convert(pixel)
+				m.Set(x, y, c)
+			}
+		}(x,&wg, monochrome)
 	}
+
+	wg.Wait()
 
 	return monochrome
 }
