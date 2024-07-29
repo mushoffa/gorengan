@@ -38,12 +38,12 @@ func (p *Image) Bytes() ([]byte, error) {
 }
 
 type pixels struct {
-	x,y int
+	x, y  int
 	color color.Color
 }
 
 // Monochrome converts registered image from [New] function and returns [Monochrome] type image.
-func (p *Image) Monochrome(threshold uint8) (*Monochrome) {
+func (p *Image) Monochrome(threshold uint8) *Monochrome {
 	bounds := p.Bounds()
 
 	monochrome := NewMonochrome(bounds, threshold)
@@ -55,11 +55,11 @@ func (p *Image) Monochrome(threshold uint8) (*Monochrome) {
 			defer wg.Done()
 
 			for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-				pixel := p.At(x,y)
+				pixel := p.At(x, y)
 				c := MonochromeModel.Convert(pixel)
 				m.Set(x, y, c)
 			}
-		}(x,&wg, monochrome)
+		}(x, &wg, monochrome)
 	}
 
 	wg.Wait()

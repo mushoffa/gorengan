@@ -15,11 +15,11 @@ func TestMonochrome_Success(t *testing.T) {
 
 	start := time.Now()
 	bounds := img.Bounds()
-	monochrome := NewMonochrome(bounds, 200)	
+	monochrome := NewMonochrome(bounds, 200)
 
 	for x := bounds.Min.X; x < bounds.Max.X; x++ {
 		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-			pixel := img.At(x,y)
+			pixel := img.At(x, y)
 			monochromeColor := MonochromeModel.Convert(pixel)
 			monochrome.Set(x, y, monochromeColor)
 		}
@@ -62,11 +62,11 @@ func BenchmarkMonochrome(b *testing.B) {
 	}
 	for n := 0; n < b.N; n++ {
 		bounds := img.Bounds()
-		monochrome := NewMonochrome(bounds, 200)	
+		monochrome := NewMonochrome(bounds, 200)
 
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-				pixel := img.At(x,y)
+				pixel := img.At(x, y)
 				monochromeColor := MonochromeModel.Convert(pixel)
 				monochrome.Set(x, y, monochromeColor)
 			}

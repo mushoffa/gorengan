@@ -35,9 +35,9 @@ func monochromeModel(c color.Color) color.Color {
 	}
 	r, g, b, _ := c.RGBA()
 
-	r = r>>8
-	g = g>>8
-	b = b>>8
+	r = r >> 8
+	g = g >> 8
+	b = b >> 8
 
 	y := 0.2126*float32(r) + 0.7152*float32(g) + 0.0722*float32(b)
 
@@ -66,21 +66,21 @@ func NewMonochrome(r img.Rectangle, threshold uint8) *Monochrome {
 	stride := 1 * width
 
 	return &Monochrome{
-		Pix: 	   pix,
+		Pix:       pix,
 		Stride:    stride,
-		Rect: 	   r,
+		Rect:      r,
 		Threshold: threshold,
 	}
 }
 
 // ColorModel returns the [MonochromeModel] color type.
-func (p *Monochrome) ColorModel() color.Model { 
+func (p *Monochrome) ColorModel() color.Model {
 	return MonochromeModel
 }
 
 // Bounds returns rectangle boundary of the image.
-func (p *Monochrome) Bounds() img.Rectangle { 
-	return p.Rect 
+func (p *Monochrome) Bounds() img.Rectangle {
+	return p.Rect
 }
 
 // At returns pixel color of the image at (x,y) coordinate point.
@@ -90,7 +90,7 @@ func (p *Monochrome) At(x, y int) color.Color {
 	}
 	i := p.PixOffset(x, y)
 	//pixel := Pixel(p.Pix[i]&(1<<uint(x%8)) != 0)
-	pixel := p.Pix[i]&(1<<uint(x%8))
+	pixel := p.Pix[i] & (1 << uint(x%8))
 	color := Black
 	if pixel != 0 {
 		color = White
@@ -111,7 +111,7 @@ func (p *Monochrome) Set(x, y int, c color.Color) {
 	p.Pix[i] = Black
 
 	if _y > p.Threshold {
-		p.Pix[i] = White		
+		p.Pix[i] = White
 	}
 }
 

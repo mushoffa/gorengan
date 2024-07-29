@@ -5,7 +5,7 @@ package image
 // vertical = true, vertical axis profile
 func (p *Monochrome) Histogram(vertical bool) []uint16 {
 	bounds := p.Bounds()
-	
+
 	minRow := bounds.Min.Y
 	maxRow := bounds.Max.Y
 	minColumn := bounds.Min.X
@@ -31,7 +31,7 @@ func (p *Monochrome) Histogram(vertical bool) []uint16 {
 			// 8-bit grayscale color
 			// 0 = black
 			// 255 = white
-			if(pixel == 0) {
+			if pixel == 0 {
 				histogram[row]++
 			}
 		}

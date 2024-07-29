@@ -9,7 +9,7 @@ import (
 
 // WriteFile writes image to local file directory of given path
 // currently generates image file in .png extension format
-func WriteFile(_img img.Image, path, filename string) (error) {
+func WriteFile(_img img.Image, path, filename string) error {
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
 		return err
