@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.6.0](https://github.com/mushoffa/gorengan/compare/v0.5.0...v0.6.0) (2024-07-29)
+
+
+### Liquibase
+
+* Add migration template and deployment strategy ([abe34a8](https://github.com/mushoffa/gorengan/commit/abe34a8758b05f270306f3d0d6612a1ac09f181e))
+
+
+### Documentation
+
+* Add Liquibase std version section ([908af69](https://github.com/mushoffa/gorengan/commit/908af69f3c5afd813c711c9a6585f1654c86df00))
+* **minio:** Change readme filename ([59b7bf1](https://github.com/mushoffa/gorengan/commit/59b7bf165bd3fea3055d52e2155b47b5ae0e0cd7))
+* **readme:** Add badge ([c64e21a](https://github.com/mushoffa/gorengan/commit/c64e21a19f7e7219c31c568027ca53818ea06f1d))
+
 ## [0.5.0](https://github.com/mushoffa/gorengan/compare/v0.4.0...v0.5.0) (2024-07-22)
 
 
