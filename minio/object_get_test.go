@@ -53,7 +53,7 @@ func TestGetObject_CSV_Success(t *testing.T) {
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
-	
+
 	writeErr := writer.WriteAll(records)
 	if writeErr != nil {
 		t.Fatal(writeErr)
