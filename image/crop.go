@@ -10,7 +10,7 @@ type CropRectangle interface {
 
 func (p *Image) Crop(minX, minY, maxX, maxY int) img.Image {
 	r := img.Rect(minX, minY, maxX, maxY)
-	cropped := p.data.(CropRectangle).SubImage(r)
+	cropped := p.Data.(CropRectangle).SubImage(r)
 
 	return cropped
 }
