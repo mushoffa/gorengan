@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.7.1](https://github.com/mushoffa/gorengan/compare/v0.7.0...v0.7.1) (2024-08-01)
+
+
+### Bug Fixes
+
+* **Image:** Push forgotten file(s) ([08ee3e3](https://github.com/mushoffa/gorengan/commit/08ee3e32304c7194f517c69d92b96b95bb004e19))
+
 ## [0.7.0](https://github.com/mushoffa/gorengan/compare/v0.6.0...v0.7.0) (2024-08-01)
 
 
