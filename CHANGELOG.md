@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.7.2](https://github.com/mushoffa/gorengan/compare/v0.7.1...v0.7.2) (2024-08-01)
+
+
+### Bug Fixes
+
+* **image:** Expose field Data of Image struct ([edacc4e](https://github.com/mushoffa/gorengan/commit/edacc4e7373c38929734bf3e336d9694b8f797ba))
+
 ### [0.7.1](https://github.com/mushoffa/gorengan/compare/v0.7.0...v0.7.1) (2024-08-01)
 
 
