@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.7.0](https://github.com/mushoffa/gorengan/compare/v0.6.0...v0.7.0) (2024-08-01)
+
+
+### Documentation
+
+* **readme:** Add goreport badge ([1b3f8ff](https://github.com/mushoffa/gorengan/commit/1b3f8ff8fceaf2ef1ee816c210457cf4a0d00f3c))
+
+
+### Image
+
+* Add crop function for Image and Monochrome type ([7dc2fab](https://github.com/mushoffa/gorengan/commit/7dc2fabaeb35df7e01249fe5e7132da8d0ebccf1))
+
 ## [0.6.0](https://github.com/mushoffa/gorengan/compare/v0.5.0...v0.6.0) (2024-07-29)
 
 
