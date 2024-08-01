@@ -120,3 +120,21 @@ func (p *Monochrome) Set(x, y int, c color.Color) {
 func (p *Monochrome) PixOffset(x, y int) int {
 	return (y-p.Rect.Min.Y)*p.Stride + (x-p.Rect.Min.X)*1
 }
+
+// SubImage returns an image representing the portion of the image p visible
+// through r. The returned value shares pixels with the original image.
+func (p *Monochrome) SubImage(r img.Rectangle) img.Image {
+	r = r.Intersect(p.Rect)
+	// If r1 and r2 are Rectangles, r1.Intersect(r2) is not guaranteed to be inside
+	// either r1 or r2 if the intersection is empty. Without explicitly checking for
+	// this, the Pix[i:] expression below can panic.
+	if r.Empty() {
+		return &Monochrome{}
+	}
+	i := p.PixOffset(r.Min.X, r.Min.Y)
+	return &Monochrome{
+		Pix:    p.Pix[i:],
+		Stride: p.Stride,
+		Rect:   r,
+	}
+}
