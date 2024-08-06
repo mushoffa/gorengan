@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.8.0](https://github.com/mushoffa/gorengan/compare/v0.7.2...v0.8.0) (2024-08-06)
+
+
+### Minio
+
+* **ListFolder:** Fix previous commit on spliting prefix name ([6cafc91](https://github.com/mushoffa/gorengan/commit/6cafc914051add5ce90e87baf7435965077ae3bd))
+* **ListFolders:** Change response type to JSON string ([c82974f](https://github.com/mushoffa/gorengan/commit/c82974fd174e6ddb4302d16564cb241331477ff0))
+
 ### [0.7.2](https://github.com/mushoffa/gorengan/compare/v0.7.1...v0.7.2) (2024-08-01)
 
 
