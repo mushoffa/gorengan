@@ -3,7 +3,9 @@ package minio
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
+	"strings"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -15,7 +17,7 @@ type MinioService interface {
 	CreateBucket(string, string) error
 	ListBuckets() ([]minio.BucketInfo, error)
 	DeleteBucket(string) error
-	ListFolders(string, ...string) ([]string, error)
+	ListFolders(string, ...string) (string, error)
 	PutObject(string, string, []byte, ...string) error
 	GetObject(string, string, ...string) ([]byte, error)
 }
@@ -59,24 +61,38 @@ func (c *client) DeleteBucket(bucketName string) error {
 }
 
 // ListFolders returns a list of foler path and files in a bucket.
-func (c *client) ListFolders(bucketName string, paths ...string) ([]string, error) {
+func (c *client) ListFolders(bucketName string, paths ...string) (string, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var folders []string
 	folderPath := c.getPath(paths...)
+
+	var payload []map[string]string
 
 	objects := c.listObjects(ctx, bucketName, minio.ListObjectsOptions{Prefix: folderPath})
 
 	for object := range objects {
 		if object.Err != nil {
-			return nil, object.Err
+			return "", object.Err
 		}
 
-		folders = append(folders, object.Key)
+		name := strings.Split(object.Key, "/")
+
+		obj := map[string]string{
+			"id":        object.ETag,
+			"name":      name[1],
+			"timestamp": object.LastModified.String(),
+		}
+
+		payload = append(payload, obj)
 	}
 
-	return folders, nil
+	j, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+
+	return string(j), nil
 }
 
 // PutObject uploads object to your MinIO server.
