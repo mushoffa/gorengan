@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.9.0](https://github.com/mushoffa/gorengan/compare/v0.8.0...v0.9.0) (2024-10-12)
+
+
+### Image
+
+* **Monochrome:** Add inverse function and param ([d359354](https://github.com/mushoffa/gorengan/commit/d35935441d21c7a91b78af7ae5290236d2a2bb7c))
+
+
+### Tests
+
+* **image:** Update monochrome input param on unit test ([fc928ce](https://github.com/mushoffa/gorengan/commit/fc928ce3a46cff98d6f328e9695a30e6817c045c))
+
 ## [0.8.0](https://github.com/mushoffa/gorengan/compare/v0.7.2...v0.8.0) (2024-08-06)
 
 
