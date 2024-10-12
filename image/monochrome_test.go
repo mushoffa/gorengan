@@ -37,13 +37,13 @@ func TestMonochrome_Success(t *testing.T) {
 }
 
 func TestMonochromeLazyConcurrent_Success(t *testing.T) {
-	img, err := ReadFile("./test/input_color_1.png")
+	img, err := ReadFile("./test/salatin_1.png")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	start := time.Now()
-	monochrome := New(img).Monochrome(200)
+	monochrome := New(img).Monochrome(200, true)
 	elapsed := time.Since(start)
 	t.Log("MonochromeConcurrent: ", elapsed)
 
@@ -80,6 +80,6 @@ func BenchmarkMonochromeConcurrent(b *testing.B) {
 		b.Fatal(err)
 	}
 	for n := 0; n < b.N; n++ {
-		New(img).Monochrome(200)
+		New(img).Monochrome(200, false)
 	}
 }

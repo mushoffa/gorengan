@@ -37,7 +37,7 @@ func Test(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	monochrome := New(img).Monochrome(160)
+	monochrome := New(img).Monochrome(160, false)
 	_histogram := monochrome.Histogram(false)
 
 	h := &histogram{_histogram}
