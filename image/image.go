@@ -44,10 +44,13 @@ type pixels struct {
 }
 
 // Monochrome converts registered image from [New] function and returns [Monochrome] type image.
-func (p *Image) Monochrome(threshold uint8) *Monochrome {
+func (p *Image) Monochrome(threshold uint8, inverse bool) *Monochrome {
 	bounds := p.Data.Bounds()
 
 	monochrome := NewMonochrome(bounds, threshold)
+	if inverse {
+		monochrome.Inverse()
+	}
 	var wg sync.WaitGroup
 
 	for x := bounds.Min.X; x < bounds.Max.X; x++ {

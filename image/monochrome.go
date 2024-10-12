@@ -23,7 +23,7 @@ type MonochromeColor struct {
 
 // RGBA returns the RGBA values of [MonochromeColor] type.
 func (c MonochromeColor) RGBA() (r, g, b, a uint32) {
-	if c.Y == 0 {
+	if c.Y == Black {
 		return 0, 0, 0, 0xffff
 	}
 	return 0xffff, 0xffff, 0xffff, 0xffff
@@ -55,6 +55,8 @@ type Monochrome struct {
 	Rect img.Rectangle
 	// Threshold is the value which determines black / white pixel
 	Threshold uint8
+	// Inverse is parameter value to change base contrast of monochrome color black-white / white-black
+	inverse bool
 }
 
 // NewMonochrome returns a new [Monochrome] image with the given bounds.
@@ -70,7 +72,22 @@ func NewMonochrome(r img.Rectangle, threshold uint8) *Monochrome {
 		Stride:    stride,
 		Rect:      r,
 		Threshold: threshold,
+		inverse: false,
 	}
+}
+
+// getColor returns monochrome color and invert if inverse param is true
+func (p *Monochrome) getColor(c uint8) uint8 {
+	if p.inverse {
+		return ^c
+	}
+
+	return c
+}
+
+// Inverse set [inverse] parameter to true
+func (p *Monochrome) Inverse() {
+	p.inverse = true
 }
 
 // ColorModel returns the [MonochromeModel] color type.
@@ -108,10 +125,10 @@ func (p *Monochrome) Set(x, y int, c color.Color) {
 
 	i := p.PixOffset(x, y)
 	_y := MonochromeModel.Convert(c).(MonochromeColor).Y
-	p.Pix[i] = Black
+	p.Pix[i] = p.getColor(Black)
 
 	if _y > p.Threshold {
-		p.Pix[i] = White
+		p.Pix[i] = p.getColor(White)
 	}
 }
 
