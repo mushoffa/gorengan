@@ -1,0 +1,46 @@
+[changelog]
+body = """
+{% if version %}\
+    ## {{ version | trim_start_matches(pat="v") }} ({{ timestamp | date(format="%Y-%m-%d") }})
+{% else %}\
+    ## Unreleased
+{% endif %}
+{% set breaking_commits = commits | filter(attribute="breaking", value=true) %}\
+{% if breaking_commits | length > 0 %}
+### Breaking Changes
+
+{% for commit in breaking_commits %}\
+* {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.breaking_description | default(value=commit.message) | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/mushoffa/fatamorgana/commit/{{ commit.id }}))
+{% endfor %}
+{% endif %}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim | upper_first }}
+
+{% for commit in commits %}\
+* {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{% if commit.breaking %}**BREAKING** {% endif %}{{ commit.message | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/mushoffa/fatamorgana/commit/{{ commit.id }}))
+{% endfor %}
+{% endfor %}
+"""
+trim = true
+
+[git]
+conventional_commits = true
+# Merge commits ("Merge pull request #5 ...") are not conventional: leave them out.
+filter_unconventional = true
+split_commits = false
+protect_breaking_commits = true
+filter_commits = false
+tag_pattern = "v[0-9]*"
+sort_commits = "oldest"
+commit_parsers = [
+  # Release bookkeeping written by `make release-*` and by older releases.
+  { message = "^release:", skip = true },
+  { message = "^chore\\(release\\)", skip = true },
+  { message = "^feat", group = "<!-- 0 -->Features" },
+  { message = "^fix", group = "<!-- 1 -->Bug Fixes" },
+  { message = "^perf", group = "<!-- 2 -->Performance Improvements" },
+  { message = "^refactor", group = "<!-- 3 -->Code Refactoring" },
+  { message = "^docs", group = "<!-- 4 -->Documentation" },
+  { message = "^test", group = "<!-- 5 -->Tests" },
+  { message = "^(build|ci|chore|style)", skip = true },
+]

@@ -1,0 +1,97 @@
+name: release
+
+on:
+  push:
+    branches:
+      - "release/v*"
+  pull_request:
+    branches:
+      - main
+    types: [closed]
+
+jobs:
+  prepare:
+    name: changelog and pull request
+    if: github.event_name == 'push' && github.event.deleted == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: release-prepare-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # git-cliff needs the full history and tags.
+          fetch-depth: 0
+
+      - name: Inspect the release branch
+        id: inspect
+        run: bash .github/scripts/release-inspect.sh "${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
+
+      - name: Render the new changelog section
+        id: cliff
+        if: steps.inspect.outputs.needs_changelog == 'true'
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --unreleased --tag ${{ steps.inspect.outputs.tag }} --strip all
+        env:
+          # Keep the rendered section outside the working tree.
+          OUTPUT: ${{ runner.temp }}/changelog-section.md
+
+      - name: Add the section to CHANGELOG.md and push it
+        if: steps.inspect.outputs.needs_changelog == 'true'
+        env:
+          TAG: ${{ steps.inspect.outputs.tag }}
+          SECTION_FILE: ${{ steps.cliff.outputs.changelog }}
+        run: |
+          bash .github/scripts/update-changelog.sh "${TAG}"
+          bash .github/scripts/commit-changelog.sh "${TAG}" "${GITHUB_REF_NAME}"
+
+      - name: Verify the release branch
+        env:
+          TAG: ${{ steps.inspect.outputs.tag }}
+        run: |
+          REQUIRE_NEW_TAG=1 bash .github/scripts/verify-release.sh \
+            "${TAG}" "$(git rev-parse HEAD)" "$(git rev-parse origin/main)"
+
+      - name: Open or update the pull request
+        env:
+          TAG: ${{ steps.inspect.outputs.tag }}
+          # Optional: a token with pull-request rights, used only to open the PR.
+          # The default token works once "Allow GitHub Actions to create and approve
+          # pull requests" is enabled in the repository's Actions settings.
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+        run: bash .github/scripts/open-release-pr.sh "${GITHUB_REF_NAME}" "${TAG}"
+
+  publish:
+    name: tag and publish
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The commit the merge produced on main, whichever merge method was used.
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      - name: Fetch the release branch tip
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: git fetch -q origin "refs/pull/${PR_NUMBER}/head"
+
+      - name: Tag and publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: bash .github/scripts/publish-release.sh "${HEAD_REF#release/}" "${MERGE_SHA}" "${HEAD_SHA}"
