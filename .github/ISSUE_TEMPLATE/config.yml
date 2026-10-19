@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/mushoffa/fatamorgana/discussions
+    about: Ask usage questions here. Enable Discussions in the repository settings first, or remove this entry.

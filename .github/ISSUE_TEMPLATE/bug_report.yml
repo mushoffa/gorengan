@@ -1,0 +1,57 @@
+name: Bug report
+description: Something in fatamorgana behaves incorrectly or panics
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. A small reproducible snippet is the fastest way to a fix.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead? Include the panic or error message and stack trace if any.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal code to reproduce
+      description: A short Go program or test. Say which image type and format you load (gray, RGBA, PNG, JPEG, a sub-image, and so on).
+      render: go
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: fatamorgana version
+      description: A tag such as v0.5.0, or a commit hash.
+      placeholder: v0.5.0
+    validations:
+      required: true
+  - type: input
+    id: go-version
+    attributes:
+      label: Go version
+      description: Output of `go version`.
+      placeholder: go1.24.0 linux/amd64
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Image (load, save, encode, decode, base64, MimeType)
+        - Filter (Savitzky-Golay, peaks)
+        - Threshold (Otsu, adaptive monochrome)
+        - Histogram
+        - Other / not sure
+    validations:
+      required: false
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Sample images (attach small ones), OS, or notes on workarounds.
