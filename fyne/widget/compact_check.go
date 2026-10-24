@@ -75,7 +75,7 @@ func (r *checkRenderer) apply() {
 		r.icon.Resource = theme.CheckButtonIcon()
 	}
 	r.text.Color = theme.Color(theme.ColorNameForeground)
-	r.text.TextSize = smallTextSize()
+	r.text.TextSize = theme.TextSize() - 1
 }
 
 func (r *checkRenderer) Refresh() {
