@@ -57,22 +57,36 @@ type BarChart struct {
 func NewBarChart(label string, x, y []float64) *BarChart {
 	chart := &BarChart{
 		Label:         label,
-		X:             x,
-		Y:             y,
 		MinSpan:       5,
 		MinBarWidth:   2,
 		Fill:          true,
 		ShowFillCheck: true,
 		Theme:         DefaultTheme(),
 	}
-	xs, ys := niceStep(maxOf(x)), niceStep(maxOf(y))
-	chart.XMax = math.Ceil(maxOf(x)/xs) * xs
-	chart.YMax = math.Ceil(maxOf(y)/ys) * ys
+	chart.setData(x, y)
 	chart.ExtendBaseWidget(chart)
 	return chart
 }
 
-func (chart *BarChart) SetData(x, y []float64) { chart.X, chart.Y = x, y; chart.Refresh() }
+// setData stores the data and fits the axis ranges to it. x = nil means the
+// index of each value (0, 1, 2, ...). The zoom is reset.
+func (chart *BarChart) setData(x, y []float64) {
+	if x == nil {
+		x = indices(len(y))
+	}
+	chart.X, chart.Y = x, y
+
+	xs, ys := niceStep(maxOf(x)), niceStep(maxOf(y))
+	chart.XMax = math.Ceil(maxOf(x)/xs) * xs
+	chart.YMax = math.Ceil(maxOf(y)/ys) * ys
+	chart.viewSet = false
+}
+
+// SetData replaces the data and redraws. Pass x = nil to use the index of each
+// value as its x position. XMax and YMax are recalculated from the new data and
+// the zoom is reset, so set any fixed range after calling SetData.
+// Call it from the UI thread (in a goroutine, wrap it in fyne.Do).
+func (chart *BarChart) SetData(x, y []float64) { chart.setData(x, y); chart.Refresh() }
 
 func (chart *BarChart) SetTheme(t ChartTheme) { chart.Theme = t; chart.Refresh() }
 

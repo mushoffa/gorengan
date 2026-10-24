@@ -61,21 +61,26 @@ type LineChart struct {
 // NewLineChart creates a line chart. Pass x = nil to use the index of each
 // value as its x position (0, 1, 2, ...), which suits histogram data.
 func NewLineChart(label string, x, y []float64) *LineChart {
-	if x == nil {
-		x = make([]float64, len(y))
-		for i := range x {
-			x[i] = float64(i)
-		}
-	}
 	chart := &LineChart{
 		Label:         label,
-		X:             x,
-		Y:             y,
 		MinSpan:       5,
 		LineWidth:     1.5,
 		ShowFillCheck: true,
 		Theme:         DefaultTheme(),
 	}
+	chart.setData(x, y)
+	chart.ExtendBaseWidget(chart)
+	return chart
+}
+
+// setData stores the data and fits the axis ranges to it. x = nil means the
+// index of each value (0, 1, 2, ...). The zoom is reset.
+func (chart *LineChart) setData(x, y []float64) {
+	if x == nil {
+		x = indices(len(y))
+	}
+	chart.X, chart.Y = x, y
+
 	minY, maxY := math.Min(0, minOf(y)), maxOf(y)
 	ys := niceStep(maxY - minY)
 	chart.XMax = maxOf(x)
@@ -84,11 +89,14 @@ func NewLineChart(label string, x, y []float64) *LineChart {
 	if chart.YMax <= chart.YMin {
 		chart.YMax = chart.YMin + 1
 	}
-	chart.ExtendBaseWidget(chart)
-	return chart
+	chart.viewSet = false
 }
 
-func (chart *LineChart) SetData(x, y []float64) { chart.X, chart.Y = x, y; chart.Refresh() }
+// SetData replaces the data and redraws. Pass x = nil to use the index of each
+// value as its x position. XMax, YMin and YMax are recalculated from the new
+// data and the zoom is reset, so set any fixed range after calling SetData.
+// Call it from the UI thread (in a goroutine, wrap it in fyne.Do).
+func (chart *LineChart) SetData(x, y []float64) { chart.setData(x, y); chart.Refresh() }
 
 func (chart *LineChart) SetTheme(t ChartTheme) { chart.Theme = t; chart.Refresh() }
 
@@ -538,4 +546,14 @@ func (chart *LineChart) fillBase() float64 {
 		return chart.clampY(0)
 	}
 	return chart.YMin
+}
+
+// indices returns 0, 1, 2, ... n-1 as float64. Used by LineChart and BarChart
+// when no x values are given.
+func indices(n int) []float64 {
+	x := make([]float64, n)
+	for i := range x {
+		x[i] = float64(i)
+	}
+	return x
 }
