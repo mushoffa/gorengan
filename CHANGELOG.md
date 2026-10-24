@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.10.0](https://github.com/mushoffa/gorengan/compare/v0.9.0...v0.10.0) (2026-10-24)
+
+
+
+### Features
+
+* **http:** Add unified WebClient with net/http, Fiber V2, and Fiber V3 ([e7a1990](https://github.com/mushoffa/fatamorgana/commit/e7a19907e6154692847d4c80855c6794202037d2))
+* **fyne:** Add NumericEntry with label, data binding and optional theme ([9e4b6f2](https://github.com/mushoffa/fatamorgana/commit/9e4b6f264ec79ed808514938d31f5d048e3b7596))
+
+
+### Tests
+
+* **http:** Add unit tests for the client package ([5f1a898](https://github.com/mushoffa/fatamorgana/commit/5f1a89836d6dac792cd018a1ba10b35414975847))
+
 ## [0.9.0](https://github.com/mushoffa/gorengan/compare/v0.8.0...v0.9.0) (2024-10-12)
 
 
