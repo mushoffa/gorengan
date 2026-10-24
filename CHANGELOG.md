@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.12.2](https://github.com/mushoffa/gorengan/compare/v0.12.1...v0.12.2) (2026-10-24)
+
+
+
+### Bug Fixes
+
+* **fyne:** Make Liena and Bar chart SetData fit axis ranges and accept nil x ([8a565fe](https://github.com/mushoffa/fatamorgana/commit/8a565feebae13cf7ed8ee8eca1fd93f17e80234e))
+
 ## [0.12.1](https://github.com/mushoffa/gorengan/compare/v0.12.0...v0.12.1) (2026-10-24)
 
 
