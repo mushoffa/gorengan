@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.11.0](https://github.com/mushoffa/gorengan/compare/v0.10.0...v0.11.0) (2026-10-24)
+
+
+
+### Features
+
+* **chart:** Add interactive bar and line charts with compact Fill check ([60c808e](https://github.com/mushoffa/fatamorgana/commit/60c808e8b4b761245b9a2217c4263d03057952f7))
+
 ## [0.10.0](https://github.com/mushoffa/gorengan/compare/v0.9.0...v0.10.0) (2026-10-24)
 
 
