@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.12.0](https://github.com/mushoffa/gorengan/compare/v0.11.0...v0.12.0) (2026-10-24)
+
+
+
+### Features
+
+* **widget:** Add default chart theme ([b2af3a5](https://github.com/mushoffa/fatamorgana/commit/b2af3a534457b4d58652b9ce7e33ab1826fcea6c))
+
 ## [0.11.0](https://github.com/mushoffa/gorengan/compare/v0.10.0...v0.11.0) (2026-10-24)
 
 
