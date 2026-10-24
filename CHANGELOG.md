@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.12.1](https://github.com/mushoffa/gorengan/compare/v0.12.0...v0.12.1) (2026-10-24)
+
+
+
+### Bug Fixes
+
+* **widget:** Replace smallTextSize() with a theme.TextSize() constant in CompactCheck ([903cc15](https://github.com/mushoffa/fatamorgana/commit/903cc154634450450dd293c741537e33a47c4f8f))
+
 ## [0.12.0](https://github.com/mushoffa/gorengan/compare/v0.11.0...v0.12.0) (2026-10-24)
 
 
