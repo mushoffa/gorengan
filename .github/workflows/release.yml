@@ -21,8 +21,9 @@ jobs:
       group: release-prepare-${{ github.ref }}
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
+          ref: ${{ github.ref_name }}
           # git-cliff needs the full history and tags.
           fetch-depth: 0
 
@@ -79,7 +80,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
 
       - name: Fetch the release branch tip
