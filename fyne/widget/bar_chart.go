@@ -36,6 +36,10 @@ type BarChart struct {
 	Fill          bool      // true = solid bars (default); false = outlined bars
 	ShowFillCheck bool      // show the "Fill" check box in the header (default true)
 	Theme         ChartTheme
+	UseAppTheme   bool // draw with the app theme from Settings().SetTheme instead of Theme
+	HeaderHeight  float32 // height of the label row above the plot (default 30)
+	LabelPadding  Insets  // label row: Left = before the title, Right = after the Fill check, Top/Bottom shift it vertically
+	PlotPadding   Insets  // space between the widget edge and the plot area; Top = gap below the label row
 	Format        func(x int, y float64) string // hover text; default "x: y"
 
 	// zoom state
@@ -43,6 +47,8 @@ type BarChart struct {
 	vLo, vHi float64 // visible x range as of the last layout
 
 	// geometry of the plot area as of the last layout
+	active ChartTheme // colours of the last layout (Theme, or the app theme)
+
 	plotLeft, plotTop, pw, ph float32
 
 	// hover state
@@ -61,6 +67,9 @@ func NewBarChart(label string, x, y []float64) *BarChart {
 		MinBarWidth:   2,
 		Fill:          true,
 		ShowFillCheck: true,
+		HeaderHeight:  headerHeight,
+		LabelPadding:  Insets{Left: padSide, Right: padSide},
+		PlotPadding:   Insets{Left: padSide, Right: padSide, Bottom: padSide},
 		Theme:         DefaultTheme(),
 	}
 	chart.setData(x, y)
@@ -100,6 +109,9 @@ func (chart *BarChart) Show() {
 	chart.BaseWidget.Show()
 	if chart.renderer != nil {
 		chart.renderer.check.Refresh()
+		if chart.UseAppTheme {
+			chart.Refresh() // re-read the app theme (it may have changed while hidden)
+		}
 	}
 }
 
@@ -195,9 +207,9 @@ func (chart *BarChart) DoubleTapped(*fyne.PointEvent) { chart.ResetZoom() }
 // styleBar colours a bar: solid when Fill is on, outline only when it is off.
 // hover selects the highlight colourenderer.
 func (chart *BarChart) styleBar(rect *canvas.Rectangle, hover bool) {
-	col := chart.Theme.Bar
+	col := chart.active.Bar
 	if hover {
-		col = chart.Theme.BarHover
+		col = chart.active.BarHover
 	}
 	if chart.Fill {
 		rect.FillColor, rect.StrokeWidth = col, 0
@@ -244,7 +256,21 @@ const (
 	headerTextSize float32 = 13
 	tickTextSize   float32 = 11
 	padSide        float32 = 8
+
+	// Gap between the plot edge and its tick labels.
+	tickLabelGap float32 = 6
 )
+
+// Insets is space around something, in pixels.
+type Insets struct{ Top, Right, Bottom, Left float32 }
+
+// tickLabelSize is the size of a tick label drawn at the tick text size.
+func tickLabelSize(s string) (w, h float32) {
+	t := canvas.NewText(s, color.White)
+	t.TextSize = tickTextSize
+	m := t.MinSize()
+	return m.Width, m.Height
+}
 
 type anchor int
 
@@ -281,7 +307,12 @@ func (renderer *barChartRenderer) Refresh() {
 // Layout rebuilds the plot for the current size, data, theme and zoom.
 func (renderer *barChartRenderer) Layout(size fyne.Size) {
 	chart := renderer.chart
-	t := chart.Theme
+	// Pick the colours for this layout: the app theme (Settings().SetTheme) or Theme.
+	chart.active = chart.Theme
+	if chart.UseAppTheme {
+		chart.active = ChartThemeFromApp()
+	}
+	t := chart.active
 
 	// Widgets inside a hidden tab miss app theme changes; redraw on a variant change.
 	if v := fyne.CurrentApp().Settings().ThemeVariant(); v != renderer.variant {
@@ -294,13 +325,21 @@ func (renderer *barChartRenderer) Layout(size fyne.Size) {
 
 	chart.vLo, chart.vHi = chart.View()
 
-	padL, padB := padSide, padSide
-	if chart.ShowTicks {
-		padL, padB = 40, 22
+	// Plot area: PlotPadding, plus room for the tick labels when ShowTicks is on.
+	hh := chart.HeaderHeight
+	if hh <= 0 {
+		hh = headerHeight
 	}
-	chart.plotLeft, chart.plotTop = padL, headerHeight
-	chart.pw = size.Width - padL - padSide
-	chart.ph = size.Height - headerHeight - padB
+	padL, padB := chart.PlotPadding.Left, chart.PlotPadding.Bottom
+	if chart.ShowTicks {
+		// The tick labels get their own room, so padding of 0 never clips them.
+		wl, _ := tickLabelSize(fmt.Sprintf("%g", chart.YMax))
+		_, hl := tickLabelSize("0")
+		padL, padB = padL+wl+tickLabelGap, padB+hl+tickLabelGap
+	}
+	chart.plotLeft, chart.plotTop = padL, hh+chart.PlotPadding.Top
+	chart.pw = size.Width - padL - chart.PlotPadding.Right
+	chart.ph = size.Height - chart.plotTop - padB
 
 	// persistent objects
 	renderer.bg.FillColor = t.Background
@@ -314,10 +353,12 @@ func (renderer *barChartRenderer) Layout(size fyne.Size) {
 	renderer.label.Text, renderer.label.Color = chart.Label, t.Label
 	ls := renderer.label.MinSize()
 	renderer.label.Resize(ls)
-	ty := (headerHeight - ls.Height) / 2
-	renderer.label.Move(fyne.NewPos(padSide, ty))
+	lp := chart.LabelPadding
+	cy := lp.Top + (hh-lp.Top-lp.Bottom)/2 // vertical centre of the label row
+	ty := cy - ls.Height/2
+	renderer.label.Move(fyne.NewPos(lp.Left, ty))
 	renderer.value.Color = t.Value
-	renderer.value.Move(fyne.NewPos(padSide+ls.Width+8, ty))
+	renderer.value.Move(fyne.NewPos(lp.Left+ls.Width+8, ty))
 
 	renderer.objects = []fyne.CanvasObject{renderer.bg, renderer.plotBg}
 	renderer.bars = map[int]*canvas.Rectangle{}
@@ -334,7 +375,7 @@ func (renderer *barChartRenderer) Layout(size fyne.Size) {
 	if chart.ShowFillCheck {
 		cs := renderer.check.MinSize()
 		renderer.check.Resize(cs)
-		renderer.check.Move(fyne.NewPos(size.Width-padSide-cs.Width, (headerHeight-cs.Height)/2))
+		renderer.check.Move(fyne.NewPos(size.Width-lp.Right-cs.Width, cy-cs.Height/2))
 		renderer.objects = append(renderer.objects, renderer.check)
 	}
 	renderer.objects = append(renderer.objects, renderer.cursor, renderer.label, renderer.value)
@@ -343,7 +384,7 @@ func (renderer *barChartRenderer) Layout(size fyne.Size) {
 
 func (renderer *barChartRenderer) buildPlot() {
 	chart := renderer.chart
-	t := chart.Theme
+	t := chart.active
 	lo, hi := chart.vLo, chart.vHi
 	x0, x1 := chart.plotLeft, chart.plotLeft+chart.pw
 	bottom := chart.plotTop + chart.ph

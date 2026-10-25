@@ -25,7 +25,7 @@ var (
 //     and a marker dot on the curve
 //   - mouse wheel zooms around the cursor, drag pans, double-click resets
 //   - a "Fill" checkbox in the header (top right) fills the area under the line
-//   - colours come from Theme (Bar = line, Fill = area, BarHover = marker)
+//   - colors come from Theme (Bar = line, Fill = area, BarHover = marker)
 //
 // X must be sorted in ascending order.
 type LineChart struct {
@@ -44,10 +44,16 @@ type LineChart struct {
 	ShowFillCheck bool                   // show the "Fill" checkbox in the header (default true)
 	ShowTicks     bool
 	Theme         ChartTheme
+	UseAppTheme   bool // draw with the app theme from Settings().SetTheme instead of Theme
+	HeaderHeight  float32 // height of the label row above the plot (default 30)
+	LabelPadding  Insets  // label row: Left = before the title, Right = after the Fill check, Top/Bottom shift it vertically
+	PlotPadding   Insets  // space between the widget edge and the plot area; Top = gap below the label row
 	Format        func(x int, y float64) string // hover text; default "x: y"
 
 	viewSet  bool
 	vLo, vHi float64
+
+	active ChartTheme // colours of the last layout (Theme, or the app theme)
 
 	plotLeft, plotTop, pw, ph float32
 
@@ -66,6 +72,9 @@ func NewLineChart(label string, x, y []float64) *LineChart {
 		MinSpan:       5,
 		LineWidth:     1.5,
 		ShowFillCheck: true,
+		HeaderHeight:  headerHeight,
+		LabelPadding:  Insets{Left: padSide, Right: padSide},
+		PlotPadding:   Insets{Left: padSide, Right: padSide, Bottom: padSide},
 		Theme:         DefaultTheme(),
 	}
 	chart.setData(x, y)
@@ -106,6 +115,9 @@ func (chart *LineChart) Show() {
 	chart.BaseWidget.Show()
 	if chart.renderer != nil {
 		chart.renderer.check.Refresh()
+		if chart.UseAppTheme {
+			chart.Refresh() // re-read the app theme (it may have changed while hidden)
+		}
 	}
 }
 
@@ -261,7 +273,12 @@ func (r *lineChartRenderer) Refresh() {
 
 func (r *lineChartRenderer) Layout(size fyne.Size) {
 	chart := r.chart
-	t := chart.Theme
+	// Pick the colours for this layout: the app theme (Settings().SetTheme) or Theme.
+	chart.active = chart.Theme
+	if chart.UseAppTheme {
+		chart.active = ChartThemeFromApp()
+	}
+	t := chart.active
 
 	// Widgets inside a hidden tab miss app theme changes; redraw on a variant change.
 	if v := fyne.CurrentApp().Settings().ThemeVariant(); v != r.variant {
@@ -274,20 +291,27 @@ func (r *lineChartRenderer) Layout(size fyne.Size) {
 
 	chart.vLo, chart.vHi = chart.View()
 
-	padL, padB := padSide, padSide
+	// Plot area: PlotPadding, plus room for the tick labels when ShowTicks is on
+	// (sized to the widest y label and the label height).
+	hh := chart.HeaderHeight
+	if hh <= 0 {
+		hh = headerHeight
+	}
+	padL, padB := chart.PlotPadding.Left, chart.PlotPadding.Bottom
 	if chart.ShowTicks {
-		padL, padB = 40, 22
+		// The tick labels get their own room, so padding of 0 never clips them.
+		var wl float32
 		for _, v := range chart.yTicks() {
-			tx := canvas.NewText(chart.formatY(v), color.White)
-			tx.TextSize = tickTextSize
-			if w := tx.MinSize().Width + 12; w > padL {
-				padL = w
+			if w, _ := tickLabelSize(chart.formatY(v)); w > wl {
+				wl = w
 			}
 		}
+		_, hl := tickLabelSize("0")
+		padL, padB = padL+wl+tickLabelGap, padB+hl+tickLabelGap
 	}
-	chart.plotLeft, chart.plotTop = padL, headerHeight
-	chart.pw = size.Width - padL - padSide
-	chart.ph = size.Height - headerHeight - padB
+	chart.plotLeft, chart.plotTop = padL, hh+chart.PlotPadding.Top
+	chart.pw = size.Width - padL - chart.PlotPadding.Right
+	chart.ph = size.Height - chart.plotTop - padB
 
 	r.bg.FillColor = t.Background
 	r.bg.Move(fyne.NewPos(0, 0))
@@ -302,10 +326,12 @@ func (r *lineChartRenderer) Layout(size fyne.Size) {
 	r.label.Text, r.label.Color = chart.Label, t.Label
 	ls := r.label.MinSize()
 	r.label.Resize(ls)
-	ty := (headerHeight - ls.Height) / 2
-	r.label.Move(fyne.NewPos(padSide, ty))
+	lp := chart.LabelPadding
+	cy := lp.Top + (hh-lp.Top-lp.Bottom)/2 // vertical centre of the label row
+	ty := cy - ls.Height/2
+	r.label.Move(fyne.NewPos(lp.Left, ty))
 	r.value.Color = t.Value
-	r.value.Move(fyne.NewPos(padSide+ls.Width+8, ty))
+	r.value.Move(fyne.NewPos(lp.Left+ls.Width+8, ty))
 
 	r.objects = []fyne.CanvasObject{r.bg, r.plotBg}
 
@@ -320,7 +346,7 @@ func (r *lineChartRenderer) Layout(size fyne.Size) {
 	if chart.ShowFillCheck {
 		cs := r.check.MinSize()
 		r.check.Resize(cs)
-		r.check.Move(fyne.NewPos(size.Width-padSide-cs.Width, (headerHeight-cs.Height)/2))
+		r.check.Move(fyne.NewPos(size.Width-lp.Right-cs.Width, cy-cs.Height/2))
 		r.objects = append(r.objects, r.check)
 	}
 	r.objects = append(r.objects, r.cursor, r.marker, r.label, r.value)
@@ -329,7 +355,7 @@ func (r *lineChartRenderer) Layout(size fyne.Size) {
 
 func (r *lineChartRenderer) buildPlot() {
 	chart := r.chart
-	t := chart.Theme
+	t := chart.active
 	lo, hi := chart.vLo, chart.vHi
 	x0, x1 := chart.plotLeft, chart.plotLeft+chart.pw
 	bottom := chart.plotTop + chart.ph
@@ -506,7 +532,7 @@ func (r *lineChartRenderer) addFill() {
 		if t1-t0 < 0.5 {
 			continue
 		}
-		rect := canvas.NewRectangle(chart.Theme.Fill)
+		rect := canvas.NewRectangle(chart.active.Fill)
 		rect.Move(fyne.NewPos(chart.plotLeft+float32(i)*colW, t0))
 		rect.Resize(fyne.NewSize(colW, t1-t0))
 		r.objects = append(r.objects, rect)

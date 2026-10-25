@@ -2,7 +2,76 @@ package widget
 
 import (
 	"image/color"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/theme"
 )
+
+// Custom color names. A Fyne theme passed to Settings().SetTheme can return
+// colours for these names to style the charts; any name it does not handle
+// falls back to a standard Fyne colour (see ChartThemeFromApp).
+const (
+	ColorNameChartBackground fyne.ThemeColorName = "chartBackground"
+	ColorNameChartPlot       fyne.ThemeColorName = "chartPlot"
+	ColorNameChartBar        fyne.ThemeColorName = "chartBar"
+	ColorNameChartFill       fyne.ThemeColorName = "chartFill"
+	ColorNameChartBarHover   fyne.ThemeColorName = "chartBarHover"
+	ColorNameChartCursor     fyne.ThemeColorName = "chartCursor"
+	ColorNameChartLabel      fyne.ThemeColorName = "chartLabel"
+	ColorNameChartValue      fyne.ThemeColorName = "chartValue"
+	ColorNameChartAxis       fyne.ThemeColorName = "chartAxis"
+	ColorNameChartGrid       fyne.ThemeColorName = "chartGrid"
+)
+ 
+// ChartThemeFromApp builds a ChartTheme from the theme set with
+// fyne.CurrentApp().Settings().SetTheme, for the current light/dark variant.
+//
+// Each chart color is looked up by its custom name first (ColorNameChart...).
+// A theme that does not define that name (Fyne returns a fully transparent
+// color for unknown names) set to a standard Fyne color:
+//
+//	Background  <- background          Label  <- foreground
+//	Plot        <- input background    Value  <- placeholder
+//	Bar         <- primary             Axis   <- foreground
+//	Fill        <- primary, ~35% alpha Grid   <- separator
+//	BarHover    <- warning             Cursor <- foreground, ~55% alpha
+func ChartThemeFromApp() ChartTheme {
+	s := fyne.CurrentApp().Settings()
+	th, v := s.Theme(), s.ThemeVariant()
+ 
+	std := func(n fyne.ThemeColorName) color.Color { return th.Color(n, v) }
+	pick := func(custom fyne.ThemeColorName, fallback color.Color) color.Color {
+		if c := th.Color(custom, v); !isTransparent(c) {
+			return c
+		}
+		return fallback
+	}
+ 
+	fg, primary := std(theme.ColorNameForeground), std(theme.ColorNamePrimary)
+	return ChartTheme{
+		Background:     pick(ColorNameChartBackground, std(theme.ColorNameBackground)),
+		PlotBackground: pick(ColorNameChartPlot, std(theme.ColorNameInputBackground)),
+		Bar:            pick(ColorNameChartBar, primary),
+		Fill:           pick(ColorNameChartFill, withAlpha(primary, 0x59)),
+		BarHover:       pick(ColorNameChartBarHover, std(theme.ColorNameWarning)),
+		Cursor:         pick(ColorNameChartCursor, withAlpha(fg, 0x90)),
+		Label:          pick(ColorNameChartLabel, fg),
+		Value:          pick(ColorNameChartValue, std(theme.ColorNamePlaceHolder)),
+		Axis:           pick(ColorNameChartAxis, fg),
+		Grid:           pick(ColorNameChartGrid, std(theme.ColorNameSeparator)),
+	}
+}
+ 
+func isTransparent(c color.Color) bool {
+	_, _, _, a := c.RGBA()
+	return a == 0
+}
+ 
+func withAlpha(c color.Color, a uint8) color.Color {
+	n := color.NRGBAModel.Convert(c).(color.NRGBA)
+	n.A = a
+	return n
+}
 
 // ChartTheme holds every color the chart uses.
 type ChartTheme struct {
