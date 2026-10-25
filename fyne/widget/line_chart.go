@@ -25,7 +25,7 @@ var (
 //     and a marker dot on the curve
 //   - mouse wheel zooms around the cursor, drag pans, double-click resets
 //   - a "Fill" checkbox in the header (top right) fills the area under the line
-//   - colors come from Theme (Bar = line, Fill = area, BarHover = marker)
+//   - colours come from Theme (Bar = line, Fill = area, BarHover = marker)
 //
 // X must be sorted in ascending order.
 type LineChart struct {
@@ -42,7 +42,9 @@ type LineChart struct {
 	LineWidth     float32                // default 1.5
 	Fill          bool                   // fill the area under the line (the checkbox toggles this)
 	ShowFillCheck bool                   // show the "Fill" checkbox in the header (default true)
-	ShowTicks     bool
+	ShowTicks     bool // axes, grid and tick labels (off = plain look, no axes at all)
+	ShowXAxis     bool // with ShowTicks on: false hides the x axis (labels, ticks, vertical grid, axis line); default true
+	ShowYAxis     bool // with ShowTicks on: false hides the y axis (labels, horizontal grid, axis line); default true
 	Theme         ChartTheme
 	UseAppTheme   bool // draw with the app theme from Settings().SetTheme instead of Theme
 	HeaderHeight  float32 // height of the label row above the plot (default 30)
@@ -72,6 +74,8 @@ func NewLineChart(label string, x, y []float64) *LineChart {
 		MinSpan:       5,
 		LineWidth:     1.5,
 		ShowFillCheck: true,
+		ShowXAxis:     true,
+		ShowYAxis:     true,
 		HeaderHeight:  headerHeight,
 		LabelPadding:  Insets{Left: padSide, Right: padSide},
 		PlotPadding:   Insets{Left: padSide, Right: padSide, Bottom: padSide},
@@ -120,6 +124,10 @@ func (chart *LineChart) Show() {
 		}
 	}
 }
+
+// showX / showY tell whether the x / y axis is drawn.
+func (chart *LineChart) showX() bool { return chart.ShowTicks && chart.ShowXAxis }
+func (chart *LineChart) showY() bool { return chart.ShowTicks && chart.ShowYAxis }
 
 // SetFill turns the area under the line on or off (same as the checkbox).
 func (chart *LineChart) SetFill(on bool) { chart.Fill = on; chart.Refresh() }
@@ -298,16 +306,19 @@ func (r *lineChartRenderer) Layout(size fyne.Size) {
 		hh = headerHeight
 	}
 	padL, padB := chart.PlotPadding.Left, chart.PlotPadding.Bottom
-	if chart.ShowTicks {
-		// The tick labels get their own room, so padding of 0 never clips them.
+	// The tick labels get their own room, so padding of 0 never clips them.
+	if chart.showY() {
 		var wl float32
 		for _, v := range chart.yTicks() {
 			if w, _ := tickLabelSize(chart.formatY(v)); w > wl {
 				wl = w
 			}
 		}
+		padL += wl + tickLabelGap
+	}
+	if chart.showX() {
 		_, hl := tickLabelSize("0")
-		padL, padB = padL+wl+tickLabelGap, padB+hl+tickLabelGap
+		padB += hl + tickLabelGap
 	}
 	chart.plotLeft, chart.plotTop = padL, hh+chart.PlotPadding.Top
 	chart.pw = size.Width - padL - chart.PlotPadding.Right
@@ -360,7 +371,7 @@ func (r *lineChartRenderer) buildPlot() {
 	x0, x1 := chart.plotLeft, chart.plotLeft+chart.pw
 	bottom := chart.plotTop + chart.ph
 
-	if chart.ShowTicks {
+	if chart.showY() {
 		for _, v := range chart.yTicks() {
 			y := chart.yToPixel(v)
 			col := t.Grid
@@ -370,6 +381,8 @@ func (r *lineChartRenderer) buildPlot() {
 			r.addLine(x0, y, x1, y, col, 1)
 			r.addText(chart.formatY(v), t.Axis, x0-6, y, anchorRight, true)
 		}
+	}
+	if chart.showX() {
 		xStep := niceStep(hi - lo)
 		for v := math.Ceil(lo/xStep) * xStep; v <= hi+1e-9; v += xStep {
 			x := chart.xToPixel(v)
@@ -409,8 +422,10 @@ func (r *lineChartRenderer) buildPlot() {
 		r.addLine(chart.xToPixel(sx), chart.yToPixel(sy), chart.xToPixel(ex), chart.yToPixel(ey), t.Bar, lw)
 	}
 
-	if chart.ShowTicks {
+	if chart.showY() {
 		r.addLine(x0, chart.plotTop, x0, bottom, t.Axis, 1)
+	}
+	if chart.showX() {
 		r.addLine(x0, bottom, x1, bottom, t.Axis, 1)
 	}
 }

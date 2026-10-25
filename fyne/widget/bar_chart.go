@@ -32,7 +32,9 @@ type BarChart struct {
 	YStep         float64   // y tick spacing (0 = automatic)
 	MinSpan       float64   // smallest visible x range when zoomed (default 5)
 	MinBarWidth   float32   // bars never get thinner than this many pixels
-	ShowTicks     bool      // axes, grid and tick labels (off in the reference look)
+	ShowTicks     bool      // axes, grid and tick labels (off = plain look, no axes at all)
+	ShowXAxis     bool // with ShowTicks on: false hides the x axis (labels, ticks, vertical grid, axis line); default true
+	ShowYAxis     bool // with ShowTicks on: false hides the y axis (labels, horizontal grid, axis line); default true
 	Fill          bool      // true = solid bars (default); false = outlined bars
 	ShowFillCheck bool      // show the "Fill" check box in the header (default true)
 	Theme         ChartTheme
@@ -67,6 +69,8 @@ func NewBarChart(label string, x, y []float64) *BarChart {
 		MinBarWidth:   2,
 		Fill:          true,
 		ShowFillCheck: true,
+		ShowXAxis:     true,
+		ShowYAxis:     true,
 		HeaderHeight:  headerHeight,
 		LabelPadding:  Insets{Left: padSide, Right: padSide},
 		PlotPadding:   Insets{Left: padSide, Right: padSide, Bottom: padSide},
@@ -98,6 +102,10 @@ func (chart *BarChart) setData(x, y []float64) {
 func (chart *BarChart) SetData(x, y []float64) { chart.setData(x, y); chart.Refresh() }
 
 func (chart *BarChart) SetTheme(t ChartTheme) { chart.Theme = t; chart.Refresh() }
+
+// showX / showY tell whether the x / y axis is drawn.
+func (chart *BarChart) showX() bool { return chart.ShowTicks && chart.ShowXAxis }
+func (chart *BarChart) showY() bool { return chart.ShowTicks && chart.ShowYAxis }
 
 // SetFill switches between solid bars (true) and outlined bars (false), the
 // same as the Fill check box. The outline is easiest to see when zoomed in.
@@ -331,11 +339,14 @@ func (renderer *barChartRenderer) Layout(size fyne.Size) {
 		hh = headerHeight
 	}
 	padL, padB := chart.PlotPadding.Left, chart.PlotPadding.Bottom
-	if chart.ShowTicks {
-		// The tick labels get their own room, so padding of 0 never clips them.
+	// The tick labels get their own room, so padding of 0 never clips them.
+	if chart.showY() {
 		wl, _ := tickLabelSize(fmt.Sprintf("%g", chart.YMax))
+		padL += wl + tickLabelGap
+	}
+	if chart.showX() {
 		_, hl := tickLabelSize("0")
-		padL, padB = padL+wl+tickLabelGap, padB+hl+tickLabelGap
+		padB += hl + tickLabelGap
 	}
 	chart.plotLeft, chart.plotTop = padL, hh+chart.PlotPadding.Top
 	chart.pw = size.Width - padL - chart.PlotPadding.Right
@@ -389,7 +400,7 @@ func (renderer *barChartRenderer) buildPlot() {
 	x0, x1 := chart.plotLeft, chart.plotLeft+chart.pw
 	bottom := chart.plotTop + chart.ph
 
-	if chart.ShowTicks {
+	if chart.showY() {
 		yStep := chart.YStep
 		if yStep <= 0 {
 			yStep = niceStep(chart.YMax)
@@ -399,6 +410,8 @@ func (renderer *barChartRenderer) buildPlot() {
 			renderer.addLine(x0, y, x1, y, t.Grid)
 			renderer.addText(fmt.Sprintf("%g", v), t.Axis, x0-6, y, anchorRight, true)
 		}
+	}
+	if chart.showX() {
 		xStep := niceStep(hi - lo)
 		for v := math.Ceil(lo/xStep) * xStep; v <= hi+1e-9; v += xStep {
 			x := chart.xToPixel(v)
@@ -434,8 +447,10 @@ func (renderer *barChartRenderer) buildPlot() {
 		renderer.bars[int(math.Round(x))] = rect
 	}
 
-	if chart.ShowTicks {
+	if chart.showY() {
 		renderer.addLine(x0, chart.plotTop, x0, bottom, t.Axis)
+	}
+	if chart.showX() {
 		renderer.addLine(x0, bottom, x1, bottom, t.Axis)
 	}
 }

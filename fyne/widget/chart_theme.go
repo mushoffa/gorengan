@@ -22,7 +22,7 @@ const (
 	ColorNameChartAxis       fyne.ThemeColorName = "chartAxis"
 	ColorNameChartGrid       fyne.ThemeColorName = "chartGrid"
 )
- 
+
 // ChartThemeFromApp builds a ChartTheme from the theme set with
 // fyne.CurrentApp().Settings().SetTheme, for the current light/dark variant.
 //
@@ -38,7 +38,7 @@ const (
 func ChartThemeFromApp() ChartTheme {
 	s := fyne.CurrentApp().Settings()
 	th, v := s.Theme(), s.ThemeVariant()
- 
+
 	std := func(n fyne.ThemeColorName) color.Color { return th.Color(n, v) }
 	pick := func(custom fyne.ThemeColorName, fallback color.Color) color.Color {
 		if c := th.Color(custom, v); !isTransparent(c) {
@@ -46,7 +46,7 @@ func ChartThemeFromApp() ChartTheme {
 		}
 		return fallback
 	}
- 
+
 	fg, primary := std(theme.ColorNameForeground), std(theme.ColorNamePrimary)
 	return ChartTheme{
 		Background:     pick(ColorNameChartBackground, std(theme.ColorNameBackground)),
@@ -61,12 +61,12 @@ func ChartThemeFromApp() ChartTheme {
 		Grid:           pick(ColorNameChartGrid, std(theme.ColorNameSeparator)),
 	}
 }
- 
+
 func isTransparent(c color.Color) bool {
 	_, _, _, a := c.RGBA()
 	return a == 0
 }
- 
+
 func withAlpha(c color.Color, a uint8) color.Color {
 	n := color.NRGBAModel.Convert(c).(color.NRGBA)
 	n.A = a
