@@ -33,15 +33,15 @@ type BarChart struct {
 	MinSpan       float64   // smallest visible x range when zoomed (default 5)
 	MinBarWidth   float32   // bars never get thinner than this many pixels
 	ShowTicks     bool      // axes, grid and tick labels (off = plain look, no axes at all)
-	ShowXAxis     bool // with ShowTicks on: false hides the x axis (labels, ticks, vertical grid, axis line); default true
-	ShowYAxis     bool // with ShowTicks on: false hides the y axis (labels, horizontal grid, axis line); default true
+	ShowXAxis     bool      // with ShowTicks on: false hides the x axis (labels, ticks, vertical grid, axis line); default true
+	ShowYAxis     bool      // with ShowTicks on: false hides the y axis (labels, horizontal grid, axis line); default true
 	Fill          bool      // true = solid bars (default); false = outlined bars
 	ShowFillCheck bool      // show the "Fill" check box in the header (default true)
 	Theme         ChartTheme
-	UseAppTheme   bool // draw with the app theme from Settings().SetTheme instead of Theme
-	HeaderHeight  float32 // height of the label row above the plot (default 30)
-	LabelPadding  Insets  // label row: Left = before the title, Right = after the Fill check, Top/Bottom shift it vertically
-	PlotPadding   Insets  // space between the widget edge and the plot area; Top = gap below the label row
+	UseAppTheme   bool                          // draw with the app theme from Settings().SetTheme instead of Theme
+	HeaderHeight  float32                       // height of the label row above the plot (default 30)
+	LabelPadding  Insets                        // label row: Left = before the title, Right = after the Fill check, Top/Bottom shift it vertically
+	PlotPadding   Insets                        // space between the widget edge and the plot area; Top = gap below the label row
 	Format        func(x int, y float64) string // hover text; default "x: y"
 
 	// zoom state
