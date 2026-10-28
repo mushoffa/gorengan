@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.13.0](https://github.com/mushoffa/gorengan/compare/v0.12.2...v0.13.0) (2026-10-28)
+
+
+
+### Features
+
+* **fyne:** Add bar and line chart padding options and app theme support ([380cee0](https://github.com/mushoffa/fatamorgana/commit/380cee0c25deb83e381e6c0f38182ccd82d06fd6))
+* **fyne:** Add chart padding options, show axis options, and app theme support ([b54fdc5](https://github.com/mushoffa/fatamorgana/commit/b54fdc5e3c7eaf30da14f1c51f9ad9b318bdbec4))
+* **widget:** Add Surface widget ([0b9851f](https://github.com/mushoffa/fatamorgana/commit/0b9851fa5d314d374ee864ec236e78260d17462f))
+* **fyne:** Add ShowXAxis and ShowYAxis to hide line and bar chart axis ([4bb1f2e](https://github.com/mushoffa/fatamorgana/commit/4bb1f2e7089c396b51b5289c5dd69a4369d55042))
+* **widget:** Add ImageViewer with zoom, compare and built-in overlay ([75c8af2](https://github.com/mushoffa/fatamorgana/commit/75c8af2bb43bfef125113906c5afada76baa7518))
+* **fyne:** Add OpenImageButton with built-in file dialog ([6ab94c1](https://github.com/mushoffa/fatamorgana/commit/6ab94c1436c415c5814ac9dec03cbe3a9ba95aa3))
+* **fyne:** Add SidePanel with optional label, header, scrollable body and footer ([14f9e61](https://github.com/mushoffa/fatamorgana/commit/14f9e61117c358cf129e0e4b482688978ff96061))
+
 ## [0.12.2](https://github.com/mushoffa/gorengan/compare/v0.12.1...v0.12.2) (2026-10-24)
 
 
