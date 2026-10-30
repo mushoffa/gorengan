@@ -46,7 +46,8 @@ const (
 // It carries its own overlay: an info bar (zoom, pixel position, gray/RGB value)
 // at the bottom center and a vertical strip of zoom in / zoom out / fit buttons
 // at the left edge, centered vertically.
-// SetOverlay hides either part.
+// SetOverlay hides either part. SetDisableZoom turns zoom off entirely and
+// hides both parts, since they only serve zooming.
 //
 // Threading: like every Fyne widget, all methods must be called on the UI
 // thread. From a goroutine (e.g. an OCR pipeline), wrap calls in fyne.Do.
@@ -66,6 +67,13 @@ type ImageViewer struct {
 	raster   *canvas.Raster
 
 	downscaleFilter bool // box-filter when the image is shown smaller than 1:1
+
+	// zoomDisabled locks the view at "fit" (zoom 1): wheel, buttons, double-tap
+	// and ZoomIn/ZoomOut/Reset do nothing, and the info bar and zoom buttons
+	// are hidden whatever SetOverlay asked for.
+	zoomDisabled bool
+	showInfo     bool // what SetOverlay asked for; only honored while zoom is enabled
+	showControls bool
 
 	// Stage: a radial gradient clipped to a rounded rectangle. Empty color
 	// names (or fully transparent colors) mean no stage.
@@ -104,6 +112,8 @@ func NewImageViewer() *ImageViewer {
 		split:           0.5,
 		downscaleFilter: true,
 		stageRadius:     defaultStageRadius,
+		showInfo:        true,
+		showControls:    true,
 	}
 	v.raster = canvas.NewRaster(v.draw)
 	v.raster.ScaleMode = canvas.ImageScalePixels
@@ -166,18 +176,51 @@ func (v *ImageViewer) buildOverlay() {
 }
 
 // SetOverlay shows or hides the info bar and the zoom buttons independently.
+// While zoom is disabled both stay hidden; the choice is remembered and takes
+// effect again once zoom is re-enabled.
 func (v *ImageViewer) SetOverlay(info, controls bool) {
-	if info {
+	v.showInfo, v.showControls = info, controls
+	v.applyOverlayVisibility()
+	v.Refresh()
+}
+
+// SetEnableZoom enables zoom (the default). The zoom buttons and the info bar
+// come back as configured by SetOverlay.
+func (v *ImageViewer) SetEnableZoom() { v.setZoomDisabled(false) }
+
+// SetDisableZoom disables zoom. The image stays fitted to the window (any
+// current zoom is reset), wheel/button/double-tap zoom is ignored, and the
+// zoom buttons and the info bar are hidden. Panning is unaffected but has no
+// visible effect at fit size.
+func (v *ImageViewer) SetDisableZoom() { v.setZoomDisabled(true) }
+
+func (v *ImageViewer) setZoomDisabled(disabled bool) {
+	if v.zoomDisabled == disabled {
+		return
+	}
+	v.zoomDisabled = disabled
+	if disabled && v.img != nil {
+		v.zoom = 1
+		v.centerOnImage()
+	}
+	v.applyOverlayVisibility()
+	v.refreshAndNotify()
+}
+
+// ZoomDisabled reports whether zoom is disabled.
+func (v *ImageViewer) ZoomDisabled() bool { return v.zoomDisabled }
+
+func (v *ImageViewer) applyOverlayVisibility() {
+	if v.showInfo && !v.zoomDisabled {
 		v.info.Show()
 	} else {
 		v.info.Hide()
 	}
-	if controls {
+	if v.showControls && !v.zoomDisabled {
 		v.controls.Show()
 	} else {
 		v.controls.Hide()
 	}
-	v.Refresh()
 }
 
 // layoutOverlay centers the info bar along the bottom edge and the button
@@ -299,7 +342,7 @@ func (v *ImageViewer) ZoomOut() { v.zoomAt(v.zoom/zoomStep, v.centerPos()) }
 
 // Reset fits the image to the window again.
 func (v *ImageViewer) Reset() {
-	if v.img == nil {
+	if v.img == nil || v.zoomDisabled {
 		return
 	}
 	v.zoom = 1
@@ -353,7 +396,7 @@ func (v *ImageViewer) currentTransform() viewTransform {
 // ---------------- interaction ----------------
 
 func (v *ImageViewer) Scrolled(ev *fyne.ScrollEvent) {
-	if v.img == nil || ev.Scrolled.DY == 0 {
+	if v.img == nil || v.zoomDisabled || ev.Scrolled.DY == 0 {
 		return
 	}
 	steps := clampFloat(float64(ev.Scrolled.DY)/scrollUnit, -maxScrollSteps, maxScrollSteps)
@@ -399,7 +442,7 @@ func (v *ImageViewer) Cursor() desktop.Cursor { return desktop.CrosshairCursor }
 
 func (v *ImageViewer) MouseIn(ev *desktop.MouseEvent)    { v.report(ev.Position) }
 func (v *ImageViewer) MouseMoved(ev *desktop.MouseEvent) { v.report(ev.Position) }
-func (v *ImageViewer) MouseOut()                      { v.setCursorInfo(0, 0, "", false) }
+func (v *ImageViewer) MouseOut()                         { v.setCursorInfo(0, 0, "", false) }
 
 // Resize also refreshes the zoom readout, because "fit" depends on the size.
 func (v *ImageViewer) Resize(size fyne.Size) {
@@ -515,7 +558,7 @@ func (v *ImageViewer) clampCenter() {
 
 // zoomAt zooms so that the image point under pos stays under pos.
 func (v *ImageViewer) zoomAt(newZoom float64, pos fyne.Position) {
-	if v.img == nil {
+	if v.img == nil || v.zoomDisabled {
 		return
 	}
 	newZoom = clampFloat(newZoom, 1, maxZoom)
