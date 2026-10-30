@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.14.0](https://github.com/mushoffa/gorengan/compare/v0.13.0...v0.14.0) (2026-10-30)
+
+
+
+### Features
+
+* **fyne:** Add option to disable zoom on ImageViewer ([521e1b0](https://github.com/mushoffa/fatamorgana/commit/521e1b0f92f6546229ed61aad97fc5ecea980a32))
+* **fyne:** Add collapsible ButtonGroup with themeable MenuButton ([28e0f0a](https://github.com/mushoffa/fatamorgana/commit/28e0f0ac36970fe586188b8df5e8d30dd0ed49d6))
+
 ## [0.13.0](https://github.com/mushoffa/gorengan/compare/v0.12.2...v0.13.0) (2026-10-28)
 
 
