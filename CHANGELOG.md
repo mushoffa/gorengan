@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.15.0](https://github.com/mushoffa/gorengan/compare/v0.14.0...v0.15.0) (2026-10-31)
+
+
+
+### Features
+
+* **fyne:** Add thumbnail mode with zoomable preview window on ImageViewer ([e023eba](https://github.com/mushoffa/fatamorgana/commit/e023ebad97d1cb4b639c03f3f611a1dda650e46e))
+* **fyne:** Add ThemeToggle light/dark segmented control widget ([bdf54bd](https://github.com/mushoffa/fatamorgana/commit/bdf54bd385328b3e52b567122f26fd4176d03733))
+
 ## [0.14.0](https://github.com/mushoffa/gorengan/compare/v0.13.0...v0.14.0) (2026-10-30)
 
 
