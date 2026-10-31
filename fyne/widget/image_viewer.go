@@ -33,6 +33,11 @@ const (
 	defaultStageRadius = 12.0 // Fyne units
 
 	overlayMargin = 8 // gap between the built-in info bar / buttons and the view edge
+
+	defaultMinW, defaultMinH     = 320, 240 // normal minimum size, Fyne units
+	defaultThumbW, defaultThumbH = 160, 120 // default thumbnail size, Fyne units
+
+	previewMaxW, previewMaxH = 960, 720 // largest default size of the preview window
 )
 
 const (
@@ -48,6 +53,10 @@ const (
 // at the left edge, centered vertically.
 // SetOverlay hides either part. SetDisableZoom turns zoom off entirely and
 // hides both parts, since they only serve zooming.
+//
+// Thumbnail mode (SetEnableThumbnail) shows the viewer at thumbnail size with
+// zoom disabled and the overlay hidden. Tapping it opens a new window with a
+// fully featured viewer of the same image.
 //
 // Threading: like every Fyne widget, all methods must be called on the UI
 // thread. From a goroutine (e.g. an OCR pipeline), wrap calls in fyne.Do.
@@ -74,6 +83,15 @@ type ImageViewer struct {
 	zoomDisabled bool
 	showInfo     bool // what SetOverlay asked for; only honored while zoom is enabled
 	showControls bool
+
+	// Thumbnail mode: small, zoom locked, overlay hidden, tap opens a preview
+	// window with a normal viewer.
+	thumbnail     bool
+	thumbSize     fyne.Size
+	thumbTitle    string
+	previewWin    fyne.Window // open preview window, nil if none
+	parentWin     fyne.Window // window the thumbnail lives in, see SetThumbnailParent
+	previewViewer *ImageViewer
 
 	// Stage: a radial gradient clipped to a rounded rectangle. Empty color
 	// names (or fully transparent colors) mean no stage.
@@ -114,10 +132,12 @@ func NewImageViewer() *ImageViewer {
 		stageRadius:     defaultStageRadius,
 		showInfo:        true,
 		showControls:    true,
+		thumbSize:       fyne.NewSize(defaultThumbW, defaultThumbH),
+		thumbTitle:      "Image",
 	}
 	v.raster = canvas.NewRaster(v.draw)
 	v.raster.ScaleMode = canvas.ImageScalePixels
-	v.raster.SetMinSize(fyne.NewSize(320, 240))
+	v.raster.SetMinSize(fyne.NewSize(defaultMinW, defaultMinH))
 	v.buildOverlay()
 	v.ExtendBaseWidget(v)
 	return v
@@ -207,16 +227,153 @@ func (v *ImageViewer) setZoomDisabled(disabled bool) {
 	v.refreshAndNotify()
 }
 
-// ZoomDisabled reports whether zoom is disabled.
-func (v *ImageViewer) ZoomDisabled() bool { return v.zoomDisabled }
+// ZoomDisabled reports whether zoom is disabled, either explicitly or because
+// thumbnail mode is on.
+func (v *ImageViewer) ZoomDisabled() bool { return v.zoomOff() }
+
+// SetEnableThumbnail turns thumbnail mode on. The viewer shrinks to the
+// thumbnail size (see SetThumbnailSize), zoom is disabled, the zoom buttons
+// and info bar are hidden, and tapping the viewer opens the image in a new
+// window with zoom, zoom buttons and info bar enabled.
+func (v *ImageViewer) SetEnableThumbnail() { v.setThumbnail(true) }
+
+// SetDisableThumbnail turns thumbnail mode off and restores the normal size
+// and, unless zoom was disabled separately, zoom and the overlay.
+func (v *ImageViewer) SetDisableThumbnail() { v.setThumbnail(false) }
+
+// ThumbnailEnabled reports whether thumbnail mode is on.
+func (v *ImageViewer) ThumbnailEnabled() bool { return v.thumbnail }
+
+// SetThumbnailSize sets the size of the viewer in thumbnail mode, in Fyne
+// units. The default is 160x120.
+func (v *ImageViewer) SetThumbnailSize(size fyne.Size) {
+	v.thumbSize = size
+	if v.thumbnail {
+		v.raster.SetMinSize(size)
+		v.Refresh()
+	}
+}
+
+// SetThumbnailTitle sets the title of the preview window opened by tapping a
+// thumbnail. The default is "Image". If the window is already open, its title
+// changes right away.
+func (v *ImageViewer) SetThumbnailTitle(title string) {
+	v.thumbTitle = title
+	if v.previewWin != nil {
+		v.previewWin.SetTitle(title)
+	}
+}
+
+// SetThumbnailParent tells the viewer which window it is shown in, so the
+// preview window closes automatically when that window closes.
+//
+// It does this by calling parent.SetOnClosed, which replaces any handler
+// already set on parent, and is itself replaced if you call SetOnClosed on
+// parent afterwards. In that case call CloseThumbnailWindow from your own
+// handler instead. If parent is the app's master window (SetMaster), closing
+// it already closes every window and none of this is needed.
+func (v *ImageViewer) SetThumbnailParent(parent fyne.Window) {
+	v.parentWin = parent
+	if parent != nil {
+		parent.SetOnClosed(v.CloseThumbnailWindow)
+	}
+}
+
+// CloseThumbnailWindow closes the preview window if it is open.
+func (v *ImageViewer) CloseThumbnailWindow() {
+	win := v.previewWin
+	if win == nil {
+		return
+	}
+	v.previewWin, v.previewViewer = nil, nil
+	win.Close()
+}
+
+func (v *ImageViewer) setThumbnail(on bool) {
+	if v.thumbnail == on {
+		return
+	}
+	v.thumbnail = on
+	if on {
+		v.raster.SetMinSize(v.thumbSize)
+		if v.img != nil {
+			v.zoom = 1
+			v.centerOnImage()
+		}
+	} else {
+		v.raster.SetMinSize(fyne.NewSize(defaultMinW, defaultMinH))
+	}
+	v.applyOverlayVisibility()
+	v.refreshAndNotify()
+}
+
+// Tapped opens the preview window when the viewer is a thumbnail.
+func (v *ImageViewer) Tapped(*fyne.PointEvent) {
+	if v.thumbnail {
+		v.openPreview()
+	}
+}
+
+// openPreview shows the image in a new window with a regular viewer. If the
+// window is already open it is brought to the front instead. While it is
+// open it follows SetImage, SetBefore, SetCompare and Clear.
+func (v *ImageViewer) openPreview() {
+	if v.img == nil {
+		return
+	}
+	if v.previewWin != nil {
+		v.previewWin.RequestFocus()
+		return
+	}
+	app := fyne.CurrentApp()
+	if app == nil {
+		return
+	}
+
+	pv := NewImageViewer()
+	pv.SetStage(v.stageCenter, v.stageEdge)
+	pv.SetStageRadius(v.stageRadius)
+	pv.SetDownscaleFilter(v.downscaleFilter)
+	pv.SetBefore(v.before)
+	pv.SetCompare(v.compare)
+	pv.split = v.split
+	pv.SetImage(v.img)
+
+	win := app.NewWindow(v.thumbTitle)
+	win.SetContent(pv)
+	win.Resize(previewWindowSize(v.img.Bounds()))
+	win.SetOnClosed(func() {
+		v.previewWin, v.previewViewer = nil, nil
+	})
+	v.previewWin, v.previewViewer = win, pv
+	win.Show()
+}
+
+// previewWindowSize fits the image into previewMaxW x previewMaxH without
+// upscaling it, but never goes below the viewer's normal minimum size.
+func previewWindowSize(b image.Rectangle) fyne.Size {
+	w, h := float64(b.Dx()), float64(b.Dy())
+	if w <= 0 || h <= 0 {
+		return fyne.NewSize(previewMaxW, previewMaxH)
+	}
+	k := math.Min(1, math.Min(previewMaxW/w, previewMaxH/h))
+	return fyne.NewSize(
+		float32(math.Max(w*k, defaultMinW)),
+		float32(math.Max(h*k, defaultMinH)),
+	)
+}
+
+// zoomOff reports whether zoom is currently locked, by SetDisableZoom or by
+// thumbnail mode.
+func (v *ImageViewer) zoomOff() bool { return v.zoomDisabled || v.thumbnail }
 
 func (v *ImageViewer) applyOverlayVisibility() {
-	if v.showInfo && !v.zoomDisabled {
+	if v.showInfo && !v.zoomOff() {
 		v.info.Show()
 	} else {
 		v.info.Hide()
 	}
-	if v.showControls && !v.zoomDisabled {
+	if v.showControls && !v.zoomOff() {
 		v.controls.Show()
 	} else {
 		v.controls.Hide()
@@ -284,6 +441,9 @@ func (v *ImageViewer) SetImage(img image.Image) {
 	}
 	v.img = img
 	v.refreshAndNotify()
+	if v.previewViewer != nil {
+		v.previewViewer.SetImage(img)
+	}
 }
 
 // SetBefore sets the image shown left of the divider in compare mode.
@@ -292,12 +452,18 @@ func (v *ImageViewer) SetImage(img image.Image) {
 func (v *ImageViewer) SetBefore(img image.Image) {
 	v.before = img
 	v.Refresh()
+	if v.previewViewer != nil {
+		v.previewViewer.SetBefore(img)
+	}
 }
 
 // SetCompare turns the before/after divider on or off.
 func (v *ImageViewer) SetCompare(on bool) {
 	v.compare = on
 	v.Refresh()
+	if v.previewViewer != nil {
+		v.previewViewer.SetCompare(on)
+	}
 }
 
 // SetStage enables the rounded stage behind the image using two theme colors:
@@ -335,6 +501,9 @@ func (v *ImageViewer) Clear() {
 	if v.OnZoom != nil {
 		v.OnZoom(0)
 	}
+	if v.previewViewer != nil {
+		v.previewViewer.Clear()
+	}
 }
 
 func (v *ImageViewer) ZoomIn()  { v.zoomAt(v.zoom*zoomStep, v.centerPos()) }
@@ -342,7 +511,7 @@ func (v *ImageViewer) ZoomOut() { v.zoomAt(v.zoom/zoomStep, v.centerPos()) }
 
 // Reset fits the image to the window again.
 func (v *ImageViewer) Reset() {
-	if v.img == nil || v.zoomDisabled {
+	if v.img == nil || v.zoomOff() {
 		return
 	}
 	v.zoom = 1
@@ -396,7 +565,7 @@ func (v *ImageViewer) currentTransform() viewTransform {
 // ---------------- interaction ----------------
 
 func (v *ImageViewer) Scrolled(ev *fyne.ScrollEvent) {
-	if v.img == nil || v.zoomDisabled || ev.Scrolled.DY == 0 {
+	if v.img == nil || v.zoomOff() || ev.Scrolled.DY == 0 {
 		return
 	}
 	steps := clampFloat(float64(ev.Scrolled.DY)/scrollUnit, -maxScrollSteps, maxScrollSteps)
@@ -438,7 +607,12 @@ func (v *ImageViewer) DragEnd() { v.dragMode = dragNone }
 
 func (v *ImageViewer) DoubleTapped(*fyne.PointEvent) { v.Reset() }
 
-func (v *ImageViewer) Cursor() desktop.Cursor { return desktop.CrosshairCursor }
+func (v *ImageViewer) Cursor() desktop.Cursor {
+	if v.thumbnail {
+		return desktop.PointerCursor
+	}
+	return desktop.CrosshairCursor
+}
 
 func (v *ImageViewer) MouseIn(ev *desktop.MouseEvent)    { v.report(ev.Position) }
 func (v *ImageViewer) MouseMoved(ev *desktop.MouseEvent) { v.report(ev.Position) }
@@ -558,7 +732,7 @@ func (v *ImageViewer) clampCenter() {
 
 // zoomAt zooms so that the image point under pos stays under pos.
 func (v *ImageViewer) zoomAt(newZoom float64, pos fyne.Position) {
-	if v.img == nil || v.zoomDisabled {
+	if v.img == nil || v.zoomOff() {
 		return
 	}
 	newZoom = clampFloat(newZoom, 1, maxZoom)
