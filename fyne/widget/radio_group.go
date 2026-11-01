@@ -40,7 +40,7 @@ func (o *option) setSelected(s bool) {
 	}
 }
 
-func (o *option) Tapped(*fyne.PointEvent)        { o.onTap() }
+func (o *option) Tapped(*fyne.PointEvent)       { o.onTap() }
 func (o *option) MouseIn(*desktop.MouseEvent)    { o.hovered = true; o.Refresh() }
 func (o *option) MouseMoved(*desktop.MouseEvent) {}
 func (o *option) MouseOut()                      { o.hovered = false; o.Refresh() }
@@ -122,13 +122,17 @@ type RadioGroup struct {
 	fynewidget.BaseWidget
 
 	Title string
-
 	// OnChanged receives the zero-based index of the selected option.
 	OnChanged func(index uint)
 
 	// RowSpacing is the vertical gap between options.
 	// Negative means "use the theme default" (theme.Padding()/2).
 	RowSpacing float32
+
+	// MaxColumns limits the column count chosen by the adaptive layout.
+	// 0 = automatic (one row, then two columns, then one column),
+	// 1 = always a single column.
+	MaxColumns int
 
 	options  []*option
 	selected uint
@@ -158,6 +162,13 @@ func NewRadioGroup(title string, labels []string, onChanged func(index uint)) *R
 // group. Pass a negative value to go back to the theme default.
 func (g *RadioGroup) SetRowSpacing(spacing float32) {
 	g.RowSpacing = spacing
+	g.Refresh()
+}
+
+// SetMaxColumns limits how many columns the layout may use (0 = automatic,
+// 1 = always a single column) and re-lays out the group.
+func (g *RadioGroup) SetMaxColumns(n int) {
+	g.MaxColumns = n
 	g.Refresh()
 }
 
@@ -242,13 +253,17 @@ func (r *groupRenderer) totalWidth(cols int) float32 {
 	return sum + float32(cols-1)*theme.Padding()*2
 }
 
-// pickColumns: single row if it fits, else two columns, else one column.
+// pickColumns: single row if it fits, else two columns, else one column,
+// never exceeding MaxColumns when it is set.
 func (r *groupRenderer) pickColumns(avail float32) int {
 	n := len(r.g.options)
-	if n <= 1 {
+	if n <= 1 || r.g.MaxColumns == 1 {
 		return 1
 	}
 	for _, c := range []int{n, 2} {
+		if r.g.MaxColumns > 0 && c > r.g.MaxColumns {
+			continue
+		}
 		if r.totalWidth(c) <= avail {
 			return c
 		}
@@ -330,8 +345,8 @@ func (r *groupRenderer) Refresh() {
 	for _, o := range r.g.options {
 		o.Refresh()
 	}
-	r.Layout(r.g.Size()) // re-apply spacing changes immediately
+	r.Layout(r.g.Size()) // re-apply spacing and column changes immediately
 }
 
 func (r *groupRenderer) Objects() []fyne.CanvasObject { return r.objs }
-func (r *groupRenderer) Destroy()                     {}
+func (r *groupRenderer) Destroy()                       {}
