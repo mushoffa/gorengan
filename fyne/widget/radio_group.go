@@ -19,12 +19,20 @@ const (
 	headerGap float32 = 4
 )
 
+var _ fyne.Disableable = (*RadioGroup)(nil)
+
+/* ------------------------------------------------------------------ */
+/* Single option (icon + label)                                        */
+/* ------------------------------------------------------------------ */
+
 type option struct {
 	fynewidget.BaseWidget
-	text     string
-	selected bool
-	hovered  bool
-	onTap    func()
+	text          string
+	selected      bool
+	hovered       bool
+	disabled      bool // this option was disabled individually
+	groupDisabled bool // the whole group is disabled
+	onTap         func()
 }
 
 func newOption(text string, onTap func()) *option {
@@ -33,6 +41,9 @@ func newOption(text string, onTap func()) *option {
 	return o
 }
 
+// isDisabled reports whether the option ignores input and is drawn dimmed.
+func (o *option) isDisabled() bool { return o.disabled || o.groupDisabled }
+
 func (o *option) setSelected(s bool) {
 	if o.selected != s {
 		o.selected = s
@@ -40,11 +51,56 @@ func (o *option) setSelected(s bool) {
 	}
 }
 
-func (o *option) Tapped(*fyne.PointEvent)       { o.onTap() }
-func (o *option) MouseIn(*desktop.MouseEvent)    { o.hovered = true; o.Refresh() }
+func (o *option) setDisabled(d bool) {
+	if o.disabled == d {
+		return
+	}
+	o.disabled = d
+	if o.isDisabled() {
+		o.hovered = false
+	}
+	o.Refresh()
+}
+
+func (o *option) setGroupDisabled(d bool) {
+	if o.groupDisabled == d {
+		return
+	}
+	o.groupDisabled = d
+	if o.isDisabled() {
+		o.hovered = false
+	}
+	o.Refresh()
+}
+
+func (o *option) Tapped(*fyne.PointEvent) {
+	if o.isDisabled() {
+		return
+	}
+	o.onTap()
+}
+
+func (o *option) MouseIn(*desktop.MouseEvent) {
+	if o.isDisabled() {
+		return
+	}
+	o.hovered = true
+	o.Refresh()
+}
+
 func (o *option) MouseMoved(*desktop.MouseEvent) {}
-func (o *option) MouseOut()                      { o.hovered = false; o.Refresh() }
-func (o *option) Cursor() desktop.Cursor         { return desktop.PointerCursor }
+
+func (o *option) MouseOut() {
+	o.hovered = false
+	o.Refresh()
+}
+
+func (o *option) Cursor() desktop.Cursor {
+	if o.isDisabled() {
+		return desktop.DefaultCursor
+	}
+	return desktop.PointerCursor
+}
 
 func (o *option) CreateRenderer() fyne.WidgetRenderer {
 	txt := canvas.NewText(o.text, theme.Color(theme.ColorNameForeground))
@@ -91,18 +147,29 @@ func (r *optionRenderer) MinSize() fyne.Size {
 }
 
 func (r *optionRenderer) Refresh() {
-	if r.o.selected {
+	dis := r.o.isDisabled()
+
+	switch {
+	case dis && r.o.selected:
+		r.icon.SetResource(theme.NewDisabledResource(theme.RadioButtonCheckedIcon()))
+	case dis:
+		r.icon.SetResource(theme.NewDisabledResource(theme.RadioButtonIcon()))
+	case r.o.selected:
 		r.icon.SetResource(theme.NewPrimaryThemedResource(theme.RadioButtonCheckedIcon()))
-	} else {
+	default:
 		r.icon.SetResource(theme.NewThemedResource(theme.RadioButtonIcon()))
 	}
 
 	r.text.Text = r.o.text
 	r.text.TextSize = theme.TextSize()
-	r.text.Color = theme.Color(theme.ColorNameForeground)
+	if dis {
+		r.text.Color = theme.Color(theme.ColorNameDisabled)
+	} else {
+		r.text.Color = theme.Color(theme.ColorNameForeground)
+	}
 	r.text.Refresh()
 
-	if r.o.hovered {
+	if r.o.hovered && !dis {
 		r.bg.FillColor = theme.Color(theme.ColorNameHover)
 	} else {
 		r.bg.FillColor = color.Transparent
@@ -116,6 +183,10 @@ func (r *optionRenderer) Objects() []fyne.CanvasObject {
 	return []fyne.CanvasObject{r.bg, r.icon, r.text}
 }
 func (r *optionRenderer) Destroy() {}
+
+/* ------------------------------------------------------------------ */
+/* RadioGroup                                                          */
+/* ------------------------------------------------------------------ */
 
 // RadioGroup is a titled, theme-aware, adaptive radio button group.
 type RadioGroup struct {
@@ -136,11 +207,12 @@ type RadioGroup struct {
 
 	options  []*option
 	selected uint
-	cols     int // last column count chosen by the layout
+	cols     int  // last column count chosen by the layout
+	disabled bool // the whole group is disabled
 }
 
 // New creates a group. The first option is selected by default.
-func NewRadioGroup(title string, labels []string, onChanged func(index uint)) *RadioGroup {
+func New(title string, labels []string, onChanged func(index uint)) *RadioGroup {
 	g := &RadioGroup{
 		Title:      title,
 		OnChanged:  onChanged,
@@ -172,10 +244,52 @@ func (g *RadioGroup) SetMaxColumns(n int) {
 	g.Refresh()
 }
 
+// Disable disables the whole group: no option can be selected by the user and
+// everything is drawn dimmed. Options disabled individually stay disabled
+// after Enable.
+func (g *RadioGroup) Disable() { g.setDisabled(true) }
+
+// Enable enables the group again.
+func (g *RadioGroup) Enable() { g.setDisabled(false) }
+
+// Disabled reports whether the whole group is disabled.
+func (g *RadioGroup) Disabled() bool { return g.disabled }
+
+func (g *RadioGroup) setDisabled(d bool) {
+	if g.disabled == d {
+		return
+	}
+	g.disabled = d
+	for _, o := range g.options {
+		o.setGroupDisabled(d)
+	}
+	g.Refresh() // header colour
+}
+
+// SetOptionDisabled disables or enables a single option by index. A disabled
+// option keeps its current state (selected or not) but cannot be changed by
+// the user. Out-of-range indices are ignored.
+func (g *RadioGroup) SetOptionDisabled(index uint, disabled bool) {
+	if int(index) >= len(g.options) {
+		return
+	}
+	g.options[index].setDisabled(disabled)
+}
+
+// OptionDisabled reports whether the option at index was disabled with
+// SetOptionDisabled. It does not include the group-level state.
+func (g *RadioGroup) OptionDisabled(index uint) bool {
+	if int(index) >= len(g.options) {
+		return false
+	}
+	return g.options[index].disabled
+}
+
 // Selected returns the selected index.
 func (g *RadioGroup) Selected() uint { return g.selected }
 
-// SetSelected selects an option without firing the callback.
+// SetSelected selects an option without firing the callback. It works even
+// when the group or the option is disabled.
 func (g *RadioGroup) SetSelected(index uint) {
 	if int(index) >= len(g.options) {
 		return
@@ -339,7 +453,11 @@ func (r *groupRenderer) Refresh() {
 
 	r.header.Text = r.g.Title
 	r.header.TextSize = theme.TextSize()
-	r.header.Color = theme.Color(theme.ColorNameForeground)
+	if r.g.disabled {
+		r.header.Color = theme.Color(theme.ColorNameDisabled)
+	} else {
+		r.header.Color = theme.Color(theme.ColorNameForeground)
+	}
 	r.header.Refresh()
 
 	for _, o := range r.g.options {
