@@ -38,6 +38,9 @@ const (
 	defaultThumbW, defaultThumbH = 160, 120 // default thumbnail size, Fyne units
 
 	previewMaxW, previewMaxH = 960, 720 // largest default size of the preview window
+
+	spinnerSize                    = 32 // loading spinner edge, Fyne units (shrinks in tiny views)
+	placeholderMin, placeholderMax = 16, 64
 )
 
 const (
@@ -57,6 +60,10 @@ const (
 // Thumbnail mode (SetEnableThumbnail) shows the viewer at thumbnail size with
 // zoom disabled and the overlay hidden. Tapping it opens a new window with a
 // fully featured viewer of the same image.
+//
+// While no image is set the viewer shows a placeholder: a flat theme color and
+// an icon, both replaceable with SetPlaceholder. ShowLoading / HideLoading
+// overlay a spinner, e.g. while the image is being decoded or processed.
 //
 // Threading: like every Fyne widget, all methods must be called on the UI
 // thread. From a goroutine (e.g. an OCR pipeline), wrap calls in fyne.Do.
@@ -92,6 +99,13 @@ type ImageViewer struct {
 	previewWin    fyne.Window // open preview window, nil if none
 	parentWin     fyne.Window // window the thumbnail lives in, see SetThumbnailParent
 	previewViewer *ImageViewer
+
+	// Placeholder shown while there is no image, and the loading spinner.
+	placeholderColor fyne.ThemeColorName // flat fill, "" for none
+	placeholderIcon  fyne.Resource       // centered icon, nil for none
+	placeholder      *canvas.Image
+	spinner          *fynewidget.Activity
+	loading          bool
 
 	// Stage: a radial gradient clipped to a rounded rectangle. Empty color
 	// names (or fully transparent colors) mean no stage.
@@ -134,10 +148,17 @@ func NewImageViewer() *ImageViewer {
 		showControls:    true,
 		thumbSize:       fyne.NewSize(defaultThumbW, defaultThumbH),
 		thumbTitle:      "Image",
+
+		placeholderColor: theme.ColorNameInputBackground,
+		placeholderIcon:  theme.NewDisabledResource(theme.FileImageIcon()),
 	}
 	v.raster = canvas.NewRaster(v.draw)
 	v.raster.ScaleMode = canvas.ImageScalePixels
 	v.raster.SetMinSize(fyne.NewSize(defaultMinW, defaultMinH))
+	v.placeholder = canvas.NewImageFromResource(v.placeholderIcon)
+	v.placeholder.FillMode = canvas.ImageFillContain
+	v.spinner = fynewidget.NewActivity()
+	v.spinner.Hide()
 	v.buildOverlay()
 	v.ExtendBaseWidget(v)
 	return v
@@ -147,25 +168,28 @@ func (v *ImageViewer) CreateRenderer() fyne.WidgetRenderer {
 	return &viewerRenderer{v: v}
 }
 
-// viewerRenderer stacks the raster and the two overlay surfaces.
+// viewerRenderer stacks the raster, the placeholder icon, the two overlay
+// surfaces and the loading spinner.
 type viewerRenderer struct{ v *ImageViewer }
 
 func (r *viewerRenderer) Layout(size fyne.Size) {
 	r.v.raster.Move(fyne.NewPos(0, 0))
 	r.v.raster.Resize(size)
 	r.v.layoutOverlay(size)
+	r.v.layoutPlaceholder(size)
 }
 
 func (r *viewerRenderer) MinSize() fyne.Size { return r.v.raster.MinSize() }
 
 func (r *viewerRenderer) Refresh() {
+	r.v.syncPlaceholder()
 	r.v.raster.Refresh()
 	r.v.info.Refresh() // re-reads theme colors
 	r.v.controls.Refresh()
 }
 
 func (r *viewerRenderer) Objects() []fyne.CanvasObject {
-	return []fyne.CanvasObject{r.v.raster, r.v.info, r.v.controls}
+	return []fyne.CanvasObject{r.v.raster, r.v.placeholder, r.v.info, r.v.controls, r.v.spinner}
 }
 
 func (r *viewerRenderer) Destroy() {}
@@ -363,6 +387,75 @@ func previewWindowSize(b image.Rectangle) fyne.Size {
 	)
 }
 
+// ShowLoading shows a spinner centered over the viewer. It stays until
+// HideLoading is called or SetImage is called (with an image or nil). The
+// spinner is independent of zoom and thumbnail mode.
+func (v *ImageViewer) ShowLoading() { v.setLoading(true) }
+
+// HideLoading hides the loading spinner.
+func (v *ImageViewer) HideLoading() { v.setLoading(false) }
+
+// Loading reports whether the loading spinner is shown.
+func (v *ImageViewer) Loading() bool { return v.loading }
+
+func (v *ImageViewer) setLoading(on bool) {
+	if v.loading == on {
+		return
+	}
+	if on {
+		v.loading = true
+		v.spinner.Show()
+		v.spinner.Start()
+	} else {
+		v.stopSpinner()
+	}
+	v.Refresh() // the placeholder icon yields to the spinner
+}
+
+// stopSpinner hides the spinner without refreshing; callers refresh afterwards.
+func (v *ImageViewer) stopSpinner() {
+	v.loading = false
+	v.spinner.Stop() // stops the animation, so a hidden spinner costs nothing
+	v.spinner.Hide()
+}
+
+// SetPlaceholder sets what is shown while there is no image: a flat fill
+// given as a theme color name and a centered icon. The defaults are
+// theme.ColorNameInputBackground and a dimmed theme.FileImageIcon. Pass "" for
+// no fill (the stage, if any, shows instead) and nil for no icon. Use
+// theme.NewDisabledResource(icon) if you want the icon to follow the theme
+// like the default does.
+func (v *ImageViewer) SetPlaceholder(color fyne.ThemeColorName, icon fyne.Resource) {
+	v.placeholderColor = color
+	v.placeholderIcon = icon
+	v.placeholder.Resource = icon
+	v.placeholder.Refresh()
+	v.Refresh()
+}
+
+// syncPlaceholder shows the icon only while there is no image and no spinner.
+func (v *ImageViewer) syncPlaceholder() {
+	if v.img == nil && v.placeholderIcon != nil && !v.loading {
+		v.placeholder.Show()
+	} else {
+		v.placeholder.Hide()
+	}
+}
+
+// layoutPlaceholder centers the placeholder icon and the spinner.
+func (v *ImageViewer) layoutPlaceholder(size fyne.Size) {
+	short := fyne.Min(size.Width, size.Height)
+
+	icon := clampFloat(float64(short)*0.35, placeholderMin, placeholderMax)
+	is := fyne.NewSquareSize(float32(icon))
+	v.placeholder.Resize(is)
+	v.placeholder.Move(fyne.NewPos((size.Width-is.Width)/2, (size.Height-is.Height)/2))
+
+	sp := fyne.NewSquareSize(fyne.Min(spinnerSize, short/2))
+	v.spinner.Resize(sp)
+	v.spinner.Move(fyne.NewPos((size.Width-sp.Width)/2, (size.Height-sp.Height)/2))
+}
+
 // zoomOff reports whether zoom is currently locked, by SetDisableZoom or by
 // thumbnail mode.
 func (v *ImageViewer) zoomOff() bool { return v.zoomDisabled || v.thumbnail }
@@ -429,7 +522,11 @@ func (v *ImageViewer) updateControls() {
 }
 
 // SetImage shows img. Zoom and pan are kept if the image bounds are unchanged.
+// It also hides the loading spinner. SetImage(nil) clears the viewer.
 func (v *ImageViewer) SetImage(img image.Image) {
+	if v.loading {
+		v.stopSpinner() // the refresh below picks up the change
+	}
 	if img == nil {
 		v.Clear()
 		return
@@ -778,6 +875,16 @@ func (v *ImageViewer) draw(w, h int) image.Image {
 	}
 
 	center, edge, hasStage := v.stageColors()
+
+	// No image yet: a flat placeholder fill replaces the stage.
+	if v.img == nil && v.placeholderColor != "" {
+		fillNRGBA(out, toNRGBA(theme.Color(v.placeholderColor)))
+		if hasStage {
+			maskCorners(out, v.stageRadius*v.canvasScale())
+		}
+		return out
+	}
+
 	if hasStage {
 		v.paintStage(out, center, edge)
 	}
@@ -794,6 +901,15 @@ func (v *ImageViewer) draw(w, h int) image.Image {
 		maskCorners(out, v.stageRadius*v.canvasScale())
 	}
 	return out
+}
+
+// fillNRGBA fills out with one color (converted to premultiplied alpha).
+func fillNRGBA(out *image.RGBA, c color.NRGBA) {
+	a := float64(c.A) / 255
+	r, g, b := uint8(float64(c.R)*a), uint8(float64(c.G)*a), uint8(float64(c.B)*a)
+	for i := 0; i < len(out.Pix); i += 4 {
+		out.Pix[i], out.Pix[i+1], out.Pix[i+2], out.Pix[i+3] = r, g, b, c.A
+	}
 }
 
 // pixelReader returns a premultiplied 8-bit sampler for img. Coordinates
