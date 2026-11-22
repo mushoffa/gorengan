@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.18.0](https://github.com/mushoffa/gorengan/compare/v0.17.0...v0.18.0) (2026-11-22)
+
+
+
+### Features
+
+* **fyne:** Add enable/disable support to RadioGroup ([bcb304e](https://github.com/mushoffa/fatamorgana/commit/bcb304e844f19bc75893572f361e7e88c9082940))
+* **fyne:** Add loading spinner and empty-state placeholder on ImageViewer ([5c0adaa](https://github.com/mushoffa/fatamorgana/commit/5c0adaa5dd626d7748d44df8377391a812f38ea5))
+* **csv:** Add CSV writer ([62efca7](https://github.com/mushoffa/fatamorgana/commit/62efca7cf3acd5a641c03fcad3dc119e9d24140e))
+
 ## [0.17.0](https://github.com/mushoffa/gorengan/compare/v0.16.0...v0.17.0) (2026-11-01)
 
 
