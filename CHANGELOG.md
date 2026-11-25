@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [0.19.0](https://github.com/mushoffa/gorengan/compare/v0.18.0...v0.19.0) (2026-11-25)
+
+
+
+### Features
+
+* Support embedded structs and add Marshal, MarshalString, and WriteFile ([0bf0969](https://github.com/mushoffa/fatamorgana/commit/0bf0969f5c0121c5973241bdb061d1f971cc14f9))
+* **slicex:** Add Map, Filter, and Reduce function ([819a634](https://github.com/mushoffa/fatamorgana/commit/819a634a5b35d33d282fbd960b98291c05ebaeda))
+
 ## [0.18.0](https://github.com/mushoffa/gorengan/compare/v0.17.0...v0.18.0) (2026-11-22)
 
 
